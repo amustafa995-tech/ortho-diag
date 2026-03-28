@@ -1,0 +1,383 @@
+:root {
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --bg-color: #f8fafc;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --sidebar-w: 240px;
+  --section-title: #334155;
+  --field-label: #64748b;
+  --field-value: #0f172a;
+  --empty-indicator: #fbbf24;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-color);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--sidebar-w);
+  background-color: #ffffff;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.nav-item {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.15s;
+}
+
+.nav-item:hover {
+  background-color: var(--bg-color);
+}
+
+.nav-item.active {
+  background-color: #eff6ff;
+  color: var(--primary-color);
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+  background-color: var(--bg-color);
+}
+
+.module-container {
+  margin: 0 auto;
+}
+
+.module-header h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--text-main);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.card h3 {
+  margin-top: 0;
+}
+
+/* ── Section Title Pills (FACE, PROFIL, SAGITTAL…) ── */
+.section-title {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1e40af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+/* ── TwoWayCheck group width ── */
+.twoway-group {
+  width: fit-content;
+}
+
+/* ── Detail field transition ── */
+.detail-fade {
+  animation: detailFadeIn 0.2s ease;
+}
+
+@keyframes detailFadeIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Classes grid ── */
+.classes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+/* ── Field Labels ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--field-label);
+  margin-bottom: 0.2rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* ── Inputs & Selects ── */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+select {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.95rem;
+  color: var(--field-value);
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s, border-left-color 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+select:focus {
+  border-color: var(--primary-color);
+}
+
+/* ── Inline Metric inputs (Overjet, CdS, etc.) ── */
+.inline-metric-input {
+  border: 1px solid #cbd5e1;
+}
+
+/* ── Empty field indicator (selects / inputs) ── */
+select.field-empty,
+input.field-empty {
+  border-left: 3px solid var(--empty-indicator) !important;
+}
+
+/* ── Unchecked mandatory TwoWayCheck indicator ── */
+.twoway-group.field-pending {
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  border-left: 3px solid var(--empty-indicator);
+  background: #fffef7;
+  transition: all 0.2s ease;
+}
+
+.twoway-group.field-done {
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  border-left: 3px solid #86efac;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+/* ── Completion badge ── */
+.completion-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.completion-badge.complete {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+
+.btn {
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+/* ── Card Header (title + badge) ── */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-header h3 {
+  font-size: 0.9rem;
+  color: var(--primary-color);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ── Custom Upload Button ── */
+.upload-zone {
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: #fafbfc;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.upload-zone:hover {
+  border-color: var(--primary-color);
+  background: #eff6ff;
+}
+
+.upload-zone h4 {
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem 0;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.upload-zone .upload-icon {
+  font-size: 1.2rem;
+  margin-bottom: 0.2rem;
+  display: block;
+}
+
+.upload-zone .upload-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.upload-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-zone.has-files {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+/* ── Keyboard shortcut hint ── */
+.kbd {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.65rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Impression */
+@media print {
+  body {
+    background-color: white;
+  }
+  
+  .app-container {
+    height: auto;
+    overflow: visible;
+    display: block;
+  }
+  
+  .sidebar, .no-print {
+    display: none !important;
+  }
+  
+  .main-content {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .module-container {
+    max-width: none !important;
+  }
+
+  .card {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .printable-section {
+    page-break-inside: avoid;
+  }
+
+  .completion-badge {
+    display: none !important;
+  }
+
+  select.field-empty,
+  input.field-empty {
+    border-left: 1px solid #cbd5e1;
+  }
+
+  .twoway-group.field-pending,
+  .twoway-group.field-done {
+    border-left: none;
+    background: none;
+    padding: 0;
+  }
+
+  @page {
+    margin: 1.5cm;
+  }
+}
