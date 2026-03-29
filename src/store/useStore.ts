@@ -6,7 +6,7 @@ export const initialSession: ClinicalSession = {
   id: "T0",
   date: new Date().toISOString().split('T')[0],
   nomSession: "Bilan Initial (T0)",
-  face: "", competenceLabiale: "", expoIncisives: "", profil: "", angleNasolabial: "", angleLabiomental: "", gummySmile: "", troisQuarts: "", symetrieVisage: "", asymetrieDetails: "",
+  face: "", competenceLabiale: "", expoIncisives: "", profil: "", angleNasolabial: "", angleLabiomental: "", gummySmile: "", troisQuarts: "", symetrieVisage: "", asymetrieDetails: "", symetrieSourire: "",
   hygieneClin: "", parodonte: "", phenotype: "", hasCaries: false, cariesDent: "", hasFreins: false, freinsDent: "", hasParodontite: false, parodontiteDetails: "",
   hasSuccionPouceClin: false, hasInterpoLabial: false, hasDeglutitionAtypique: false, respiClin: "", hasRincageDents: false, hasAtm: false, succionPouceDetails: "", interpoLabialDetails: "", deglutitionAtypiqueDetails: "", rincageDentsDetails: "", atmDetails: "", anamnGenClin: "", remarqueClin: "", opgRemarque: "",
   overjet: "", classeMolaireD: "", classeMolaireG: "", classeCanineD: "", classeCanineG: "", hasXBiteAnt: false, xbiteAntDent: "", overbite: "", cdsD: "", cdsG: "", hasOcclusalCant: false, hasTraumatisant: false, lm: "", lmDetails: "", hasXSBitePost: false, xsbitePostDent: "",
@@ -19,6 +19,9 @@ export const initialSession: ClinicalSession = {
   sna: "", snb: "", wits: "", snSpaspp: "", snMego: "", incisifSn: "", incisifIncisif: "",
   opgPresenceRas: true, opgPositionRas: true, opgProportionRas: true, opgPathologieRas: true, 
   opgPresence: "", opgPosition: "", opgProportion: "", opgPathologie: "", radioOverview: "",
+  stadeMaturation: "",
+  formeArcadeSup: "",
+  formeArcadeInf: "",
   planTraitement1: "", planTraitement2: "", planTraitement3: "",
   planTraitement4: "", planTraitement5: "", planTraitement6: "",
   photosIntra: [],
@@ -35,7 +38,7 @@ const initialPatient: PatientRecord = {
     maladiesChroniques: { diabete: false, hypertension: false, allergies: false, cardio: false, respi: false, neuro: false },
     maladiesChroniquesDetails: { diabete: "", hypertension: "", allergies: "", cardio: "", respi: "", neuro: "" },
     hasChirurgies: false, chirurgiesAnterieures: "", hasTraitements: false, traitementsCours: "", allergiesMedic: "", hasAutreGen: false, autreGen: "",
-    antecFamExtract: false, carieRecurrente: false, sensibilite: false, hasOrthoPasse: false, traitementsOrthoPasses: "", hasAutreDent: false, autreDent: "", autreAntecDent: "",
+    antecFamExtract: false, extractionDetails: "", carieRecurrente: false, sensibilite: false, hasOrthoPasse: false, traitementsOrthoPasses: "", hasAutreDent: false, autreDent: "", autreAntecDent: "",
     mauvaisesHabitudes: { succionPouce: false, bruxisme: false, rongerOngles: false, respiBuccale: false },
     motifConsultation: "Dents en avant", praticien: "Dr. MA", dention: "", implant: "", implantDent: "",
     sessions: [initialSession],
@@ -75,14 +78,16 @@ export const useStore = create<OrthoDiagState>()(
 
       updatePatientField: (field, value) => set((state) => {
         if (typeof field === 'string' && field.includes('.')) {
-          const [parent, child] = field.split('.');
-          const parentObj = (state.patient as any)[parent];
-          return {
-            patient: {
-              ...state.patient,
-              [parent]: { ...parentObj, [child]: value }
-            }
-          };
+          const parts = field.split('.');
+          const root = parts[0];
+          const rootObj = (state.patient as any)[root];
+          if (parts.length === 2) {
+            return { patient: { ...state.patient, [root]: { ...rootObj, [parts[1]]: value } } };
+          }
+          if (parts.length === 3) {
+            const nested = rootObj?.[parts[1]];
+            return { patient: { ...state.patient, [root]: { ...rootObj, [parts[1]]: { ...nested, [parts[2]]: value } } } };
+          }
         }
         return {
           patient: { ...state.patient, [field as string]: value }

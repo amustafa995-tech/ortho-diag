@@ -1,6 +1,30 @@
 
 import { useStore } from '../../store/useStore';
-import { Input } from '../ui/Forms';
+import { Input, Select } from '../ui/Forms';
+
+const DROSCHL_TABLE = [
+  {sum:19.5, maxM:21.3, mandM:20.8, maxF:20.2, mandF:20.0},
+  {sum:20.0, maxM:21.5, mandM:21.0, maxF:20.5, mandF:20.3},
+  {sum:20.5, maxM:21.7, mandM:21.2, maxF:20.7, mandF:20.6},
+  {sum:21.0, maxM:21.9, mandM:21.4, maxF:21.0, mandF:20.8},
+  {sum:21.5, maxM:22.0, mandM:21.6, maxF:21.2, mandF:21.1},
+  {sum:22.0, maxM:22.2, mandM:21.8, maxF:21.5, mandF:21.4},
+  {sum:22.5, maxM:22.4, mandM:22.0, maxF:21.7, mandF:21.6},
+  {sum:23.0, maxM:22.6, mandM:22.3, maxF:22.0, mandF:21.9},
+  {sum:23.5, maxM:22.7, mandM:22.5, maxF:22.2, mandF:22.2},
+  {sum:24.0, maxM:22.9, mandM:22.7, maxF:22.5, mandF:22.4},
+  {sum:24.5, maxM:23.1, mandM:22.9, maxF:22.7, mandF:22.7},
+  {sum:25.0, maxM:23.2, mandM:23.1, maxF:23.0, mandF:23.0},
+  {sum:25.5, maxM:23.4, mandM:23.3, maxF:23.2, mandF:23.2},
+  {sum:26.0, maxM:23.6, mandM:23.5, maxF:23.5, mandF:23.5},
+  {sum:26.5, maxM:23.8, mandM:23.7, maxF:23.7, mandF:23.7},
+  {sum:27.0, maxM:24.0, mandM:23.9, maxF:24.0, mandF:24.0},
+] as const;
+
+const MAX_TEETH_KEYS = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26'];
+const MAX_TEETH_LABELS = ['16','15','14','13','12','11','21','22','23','24','25','26'];
+const MAND_TEETH_KEYS = ['t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
+const MAND_TEETH_LABELS = ['46','45','44','43','42','41','31','32','33','34','35','36'];
 
 export default function MoulageTab() {
   const patient = useStore(state => state.patient);
@@ -20,11 +44,6 @@ export default function MoulageTab() {
     updateSessionField(activeSessionId, e.target.name, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
   };
 
-  const maxTeethKeys = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26'];
-  const maxTeethLabels = ['16','15','14','13','12','11','21','22','23','24','25','26'];
-  const mandTeethKeys = ['t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
-  const mandTeethLabels = ['46','45','44','43','42','41','31','32','33','34','35','36'];
-
   const incMax = [n('t12'),n('t11'),n('t21'),n('t22')];
   const incMand = [n('t42'),n('t41'),n('t31'),n('t32')];
   const sixs = [n('t16'),n('t26'),n('t36'),n('t46')];
@@ -32,7 +51,7 @@ export default function MoulageTab() {
   const hasInc = [...incMax,...incMand].some(v => v > 0);
   const has6 = sixs.some(v => v > 0);
   const hasPMCan = pmCan.some(v => v > 0);
-  const allFilled = maxTeethKeys.every(k => n(k) > 0) && mandTeethKeys.every(k => n(k) > 0);
+  const allFilled = MAX_TEETH_KEYS.every(k => n(k) > 0) && MAND_TEETH_KEYS.every(k => n(k) > 0);
 
   let stade = 'Non déterminé';
   let stadeColor = '#94a3b8';
@@ -41,37 +60,17 @@ export default function MoulageTab() {
   else { stade = 'Aucune mesure'; stadeColor = '#94a3b8'; }
 
   const isMixte = !!activeSession.isDroschlActive;
-  
-
-  const droschlTable = [
-    {sum:19.5, maxM:21.3, mandM:20.8, maxF:20.2, mandF:20.0},
-    {sum:20.0, maxM:21.5, mandM:21.0, maxF:20.5, mandF:20.3},
-    {sum:20.5, maxM:21.7, mandM:21.2, maxF:20.7, mandF:20.6},
-    {sum:21.0, maxM:21.9, mandM:21.4, maxF:21.0, mandF:20.8},
-    {sum:21.5, maxM:22.0, mandM:21.6, maxF:21.2, mandF:21.1},
-    {sum:22.0, maxM:22.2, mandM:21.8, maxF:21.5, mandF:21.4},
-    {sum:22.5, maxM:22.4, mandM:22.0, maxF:21.7, mandF:21.6},
-    {sum:23.0, maxM:22.6, mandM:22.3, maxF:22.0, mandF:21.9},
-    {sum:23.5, maxM:22.7, mandM:22.5, maxF:22.2, mandF:22.2},
-    {sum:24.0, maxM:22.9, mandM:22.7, maxF:22.5, mandF:22.4},
-    {sum:24.5, maxM:23.1, mandM:22.9, maxF:22.7, mandF:22.7},
-    {sum:25.0, maxM:23.2, mandM:23.1, maxF:23.0, mandF:23.0},
-    {sum:25.5, maxM:23.4, mandM:23.3, maxF:23.2, mandF:23.2},
-    {sum:26.0, maxM:23.6, mandM:23.5, maxF:23.5, mandF:23.5},
-    {sum:26.5, maxM:23.8, mandM:23.7, maxF:23.7, mandF:23.7},
-    {sum:27.0, maxM:24.0, mandM:23.9, maxF:24.0, mandF:24.0},
-  ];
 
   const sumIncMand = n('t42') + n('t41') + n('t31') + n('t32');
   const getDroschl = (arch: 'max'|'mand'): number => {
     if (sumIncMand <= 0) return 0;
     const key = arch === 'max' ? (sexe === 'F' ? 'maxF' : 'maxM') : (sexe === 'F' ? 'mandF' : 'mandM');
-    if (sumIncMand <= droschlTable[0].sum) return droschlTable[0][key];
-    if (sumIncMand >= droschlTable[droschlTable.length-1].sum) return droschlTable[droschlTable.length-1][key];
-    for (let i = 0; i < droschlTable.length - 1; i++) {
-      if (sumIncMand >= droschlTable[i].sum && sumIncMand <= droschlTable[i+1].sum) {
-        const t = (sumIncMand - droschlTable[i].sum) / (droschlTable[i+1].sum - droschlTable[i].sum);
-        return Math.round((droschlTable[i][key] + t * (droschlTable[i+1][key] - droschlTable[i][key])) * 10) / 10;
+    if (sumIncMand <= DROSCHL_TABLE[0].sum) return DROSCHL_TABLE[0][key];
+    if (sumIncMand >= DROSCHL_TABLE[DROSCHL_TABLE.length-1].sum) return DROSCHL_TABLE[DROSCHL_TABLE.length-1][key];
+    for (let i = 0; i < DROSCHL_TABLE.length - 1; i++) {
+      if (sumIncMand >= DROSCHL_TABLE[i].sum && sumIncMand <= DROSCHL_TABLE[i+1].sum) {
+        const t = (sumIncMand - DROSCHL_TABLE[i].sum) / (DROSCHL_TABLE[i+1].sum - DROSCHL_TABLE[i].sum);
+        return Math.round((DROSCHL_TABLE[i][key] + t * (DROSCHL_TABLE[i+1][key] - DROSCHL_TABLE[i][key])) * 10) / 10;
       }
     }
     return 0;
@@ -125,8 +124,8 @@ export default function MoulageTab() {
 
   const sumMax6 = n('t13')+n('t12')+n('t11')+n('t21')+n('t22')+n('t23');
   const sumMand6 = n('t43')+n('t42')+n('t41')+n('t31')+n('t32')+n('t33');
-  const sumMax12 = maxTeethKeys.reduce((s,k) => s+n(k), 0);
-  const sumMand12 = mandTeethKeys.reduce((s,k) => s+n(k), 0);
+  const sumMax12 = MAX_TEETH_KEYS.reduce((s,k) => s+n(k), 0);
+  const sumMand12 = MAND_TEETH_KEYS.reduce((s,k) => s+n(k), 0);
   const ratio6 = sumMax6 > 0 ? sumMand6/sumMax6 : 0;
   const ratio12 = sumMax12 > 0 ? sumMand12/sumMax12 : 0;
   const bolton6Pct = Math.round(ratio6 * 1000) / 10;
@@ -173,23 +172,28 @@ export default function MoulageTab() {
         </div>
       </div>
 
+      <div className="flex-row" style={{ marginBottom: 'var(--sp-2)' }}>
+        <Select label="Arcade Sup." name="formeArcadeSup" options={["Ovoïde", "Triangulaire", "Carrée"]} ti={390} />
+        <Select label="Arcade Inf." name="formeArcadeInf" options={["Ovoïde", "Triangulaire", "Carrée"]} ti={391} />
+      </div>
+
       <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
         <div className="card-header">
           <h3>Dimensions mésio-distales</h3>
-          <span className={`completion-badge ${allFilled ? 'complete' : ''}`}>{maxTeethKeys.filter(k=>n(k)>0).length + mandTeethKeys.filter(k=>n(k)>0).length}/24</span>
+          <span className={`completion-badge ${allFilled ? 'complete' : ''}`}>{MAX_TEETH_KEYS.filter(k=>n(k)>0).length + MAND_TEETH_KEYS.filter(k=>n(k)>0).length}/24</span>
         </div>
         <div style={{marginBottom:'0.75rem'}}>
           <div style={{display:'flex', gap:'4px', flexWrap:'nowrap'}}>
-            {maxTeethKeys.slice(0,6).map((k,i) => renderTeethInput(k, maxTeethLabels[i], 400+i))}
+            {MAX_TEETH_KEYS.slice(0,6).map((k,i) => renderTeethInput(k, MAX_TEETH_LABELS[i], 400+i))}
             <div style={{width:'1px',background:'#cbd5e1',flexShrink:0,minHeight:'40px'}}></div>
-            {maxTeethKeys.slice(6).map((k,i) => renderTeethInput(k, maxTeethLabels[6+i], 406+i))}
+            {MAX_TEETH_KEYS.slice(6).map((k,i) => renderTeethInput(k, MAX_TEETH_LABELS[6+i], 406+i))}
           </div>
         </div>
         <div>
           <div style={{display:'flex', gap:'4px', flexWrap:'nowrap'}}>
-            {mandTeethKeys.slice(0,6).map((k,i) => renderTeethInput(k, mandTeethLabels[i], 420+i))}
+            {MAND_TEETH_KEYS.slice(0,6).map((k,i) => renderTeethInput(k, MAND_TEETH_LABELS[i], 420+i))}
             <div style={{width:'1px',background:'#cbd5e1',flexShrink:0,minHeight:'40px'}}></div>
-            {mandTeethKeys.slice(6).map((k,i) => renderTeethInput(k, mandTeethLabels[6+i], 426+i))}
+            {MAND_TEETH_KEYS.slice(6).map((k,i) => renderTeethInput(k, MAND_TEETH_LABELS[6+i], 426+i))}
           </div>
         </div>
       </div>

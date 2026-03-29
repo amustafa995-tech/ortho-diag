@@ -89,7 +89,7 @@ export default function PatientHub() {
     }
     
     // Format folder name securely
-    const folderName = `${newPatientNom.trim().toUpperCase()}_${newPatientPrenom.trim()}`.replace(/[^a-zA-Z0-9_-]/g, '');
+    const folderName = `${newPatientNom.trim().toUpperCase()}_${newPatientPrenom.trim()}`.replace(/[^\p{L}\p{N}_-]/gu, '');
     
     try {
       setLoading(true);

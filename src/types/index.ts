@@ -49,7 +49,7 @@ export interface ClinicalSession {
   nomSession: string;
   
   // Examen Clinique
-  face: string; competenceLabiale: string; expoIncisives: string; profil: string; angleNasolabial: string; angleLabiomental: string; gummySmile: string; troisQuarts: string; symetrieVisage: string; asymetrieDetails: string;
+  face: string; competenceLabiale: string; expoIncisives: string; profil: string; angleNasolabial: string; angleLabiomental: string; gummySmile: string; troisQuarts: string; symetrieVisage: string; asymetrieDetails: string; symetrieSourire: string;
   hygieneClin: string; parodonte: string; phenotype: string; hasCaries: boolean; cariesDent: string; hasFreins: boolean; freinsDent: string; hasParodontite: boolean; parodontiteDetails: string;
   hasSuccionPouceClin: boolean; hasInterpoLabial: boolean; hasDeglutitionAtypique: boolean; respiClin: string; hasRincageDents: boolean; hasAtm: boolean; succionPouceDetails: string; interpoLabialDetails: string; deglutitionAtypiqueDetails: string; rincageDentsDetails: string; atmDetails: string; anamnGenClin: string; remarqueClin: string; opgRemarque: string;
   overjet: string; classeMolaireD: string; classeMolaireG: string; classeCanineD: string; classeCanineG: string; hasXBiteAnt: boolean; xbiteAntDent: string; overbite: string; cdsD: string; cdsG: string; hasOcclusalCant: boolean; hasTraumatisant: boolean; lm: string; lmDetails: string; hasXSBitePost: boolean; xsbitePostDent: string;
@@ -69,6 +69,10 @@ export interface ClinicalSession {
   opgPresenceRas: boolean; opgPositionRas: boolean; opgProportionRas: boolean; opgPathologieRas: boolean; 
   opgPresence: string; opgPosition: string; opgProportion: string; opgPathologie: string; radioOverview: string;
   
+  stadeMaturation: string;
+  formeArcadeSup: string;
+  formeArcadeInf: string;
+
   planTraitement1: string; planTraitement2: string; planTraitement3: string;
   planTraitement4: string; planTraitement5: string; planTraitement6: string;
 
@@ -115,6 +119,7 @@ export interface PatientRecord {
 
   // Dental History
   antecFamExtract: boolean;
+  extractionDetails: string;
   carieRecurrente: boolean;
   sensibilite: boolean;
   hasOrthoPasse: boolean;

@@ -8,6 +8,19 @@ const GLOBAL_KEYS = [
   'hasAutreDent','autreDent','autreAntecDent','mauvaisesHabitudes','documents'
 ];
 
+const focusNext = (current: HTMLElement) => {
+  const form = current.closest('.module-content, .card, main') || document;
+  const focusable = Array.from(form.querySelectorAll<HTMLElement>(
+    'input:not([type="hidden"]):not([type="file"]):not([readonly]), select, textarea, button:not([tabindex="-1"])'
+  )).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+  const idx = focusable.indexOf(current);
+  if (idx >= 0 && idx < focusable.length - 1) focusable[idx + 1].focus();
+};
+
+export const handleEnterKey = (e: React.KeyboardEvent<HTMLElement>) => {
+  if (e.key === 'Enter') { e.preventDefault(); focusNext(e.currentTarget); }
+};
+
 export const useFieldMapping = (name: string) => {
   const isGlobal = GLOBAL_KEYS.includes(name) || GLOBAL_KEYS.includes(name.split('.')[0]);
   const patient = useStore(state => state.patient);
@@ -30,56 +43,51 @@ export const useFieldMapping = (name: string) => {
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
-    if (isGlobal) {
-      updatePatientField(name, value);
-    } else {
-      updateSessionField(activeSessionId, name, value);
-    }
+    if (isGlobal) updatePatientField(name, value);
+    else updateSessionField(activeSessionId, name, value);
   };
 
   const onValueChange = (value: any) => {
-    if (isGlobal) {
-      updatePatientField(name, value);
-    } else {
-      updateSessionField(activeSessionId, name, value);
-    }
+    if (isGlobal) updatePatientField(name, value);
+    else updateSessionField(activeSessionId, name, value);
   };
 
   return { val, onChange, onValueChange };
 };
 
 
-export const Input = ({ label, name, type = 'text', ph = '', refObj = null, overrideValue, readOnly=false, ti }: any) => {
+export const Input = ({ label, name, type = 'text', ph = '', refObj = null, overrideValue, readOnly = false, ti }: any) => {
   const { val, onChange } = useFieldMapping(name);
   const displayVal = overrideValue !== undefined ? overrideValue : val;
-  
+
   return (
-    <div className="form-group" style={{width: '100%', margin: label ? '0 0 0.5rem 0' : '0' }}>
+    <div className="form-group" style={{ width: '100%' }}>
       {label && <label>{label}</label>}
-      <input 
-        type={type} 
-        name={name} 
-        value={displayVal || ''} 
-        onChange={onChange} 
-        placeholder={ph} 
-        ref={refObj} 
+      <input
+        type={type}
+        name={name}
+        value={displayVal || ''}
+        onChange={onChange}
+        onKeyDown={handleEnterKey}
+        placeholder={ph}
+        ref={refObj}
         readOnly={readOnly}
         tabIndex={ti}
         className={!displayVal && !readOnly ? 'field-empty' : ''}
-        style={readOnly ? { backgroundColor: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' } : undefined}
+        style={readOnly ? { backgroundColor: 'var(--c-bg)', color: 'var(--c-text-muted)', cursor: 'not-allowed' } : undefined}
       />
     </div>
   );
 };
 
-export const Select = ({ label, name, options, normValue, refObj=null, ti }: any) => {
+export const Select = ({ label, name, options, normValue, refObj = null, ti }: any) => {
   const { val, onChange } = useFieldMapping(name);
   return (
-    <div className="form-group" style={{margin: label ? '0 0 0.5rem 0' : '0'}}>
-      {label && <label>{label} {normValue && <span style={{color: '#94a3b8', fontStyle: 'italic', fontWeight: 400, marginLeft: '4px'}}>{normValue}</span>}</label>}
-      <select name={name} value={val || ''} onChange={onChange} ref={refObj} tabIndex={ti} className={!val ? 'field-empty' : ''}>
+    <div className="form-group">
+      {label && <label>{label} {normValue && <span style={{ color: 'var(--c-text-muted)', fontStyle: 'italic', fontWeight: 400 }}>{normValue}</span>}</label>}
+      <select name={name} value={val || ''} onChange={onChange} onKeyDown={handleEnterKey} ref={refObj} tabIndex={ti} className={!val ? 'field-empty' : ''}>
         <option value="">-</option>
-        {options.map((o:string) => <option key={o} value={o}>{o}</option>)}
+        {options.map((o: string) => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
   );
@@ -88,8 +96,8 @@ export const Select = ({ label, name, options, normValue, refObj=null, ti }: any
 export const Checkbox = ({ label, name, ti }: any) => {
   const { val, onChange } = useFieldMapping(name);
   return (
-    <label style={{display:'inline-flex', alignItems:'center', gap:'6px', cursor:'pointer', whiteSpace: 'nowrap', fontWeight:500, color:'#0f172a', fontSize:'0.9rem'}}>
-      <input type="checkbox" name={name} checked={!!val} onChange={onChange} tabIndex={ti} style={{width:'auto', margin:0, transform: 'scale(1.1)'}}/> {label}
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 500, color: 'var(--c-text)', fontSize: 'var(--fs-value)' }}>
+      <input type="checkbox" name={name} checked={!!val} onChange={onChange} onKeyDown={handleEnterKey} tabIndex={ti} style={{ width: 'auto', margin: 0, transform: 'scale(1.1)' }} /> {label}
     </label>
   );
 };
@@ -99,19 +107,15 @@ export const ConditionToggle = ({ label, fieldName }: { label: string, fieldName
   const detailName = `maladiesChroniquesDetails.${fieldName}`;
   const { val: isChecked } = useFieldMapping(checkName);
   const { val: details, onChange: onDetailChange } = useFieldMapping(detailName);
-  
+
   return (
-    <div style={{marginBottom: '0.25rem'}}>
+    <div style={{ marginBottom: '2px' }}>
       <Checkbox label={label} name={checkName} />
       {isChecked && (
-        <div style={{marginTop: '0.1rem', paddingLeft: '1.25rem', marginBottom: '0.25rem'}}>
-          <input 
-             type="text" 
-             name={detailName} 
-             value={details || ''} 
-             onChange={onDetailChange} 
-             placeholder={`Détail : ${label}...`} 
-             style={{width: '100%', padding:'0.25rem 0.5rem', fontSize:'0.8rem', border:'1px solid var(--border-color)', borderRadius:'3px'}} 
+        <div style={{ paddingLeft: 'var(--sp-4)', marginTop: '2px' }}>
+          <input type="text" name={detailName} value={details || ''} onChange={onDetailChange} onKeyDown={handleEnterKey}
+            placeholder={`Détail : ${label}...`}
+            style={{ width: '100%', padding: '2px var(--sp-2)', fontSize: 'var(--fs-small)', border: '1px solid var(--c-border)', borderRadius: 'var(--radius)' }}
           />
         </div>
       )}
@@ -122,20 +126,16 @@ export const ConditionToggle = ({ label, fieldName }: { label: string, fieldName
 export const ClinicalToggle = ({ label, stateField, detailField, ti }: { label: string, stateField: string, detailField: string, ti?: number }) => {
   const { val: isChecked } = useFieldMapping(stateField);
   const { val: detailVal, onChange: onDetailChange } = useFieldMapping(detailField);
-  
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+    <div className="flex-row gap-2" style={{ marginBottom: '2px', flexWrap: 'wrap' }}>
       <Checkbox label={label} name={stateField} ti={ti} />
       {isChecked && (
-        <input 
-             type="text" 
-             name={detailField} 
-             value={detailVal || ''} 
-             onChange={onDetailChange} 
-             tabIndex={ti ? ti + 1 : undefined}
-             placeholder="Précisez..." 
-             className="detail-fade"
-             style={{width: '140px', padding:'0.2rem 0.4rem', fontSize:'0.85rem', border:'1px solid #cbd5e1', borderRadius:'4px', backgroundColor: '#fff'}} 
+        <input type="text" name={detailField} value={detailVal || ''} onChange={onDetailChange} onKeyDown={handleEnterKey}
+          tabIndex={ti ? ti + 1 : undefined}
+          placeholder="Précisez..."
+          className="detail-fade"
+          style={{ width: '130px', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }}
         />
       )}
     </div>
@@ -145,17 +145,11 @@ export const ClinicalToggle = ({ label, stateField, detailField, ti }: { label: 
 export const InlineMetric = ({ label, name, maxLength = 3, ti }: any) => {
   const { val, onChange } = useFieldMapping(name);
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginRight: '1rem', marginBottom: '0.5rem' }}>
-      {label && <label style={{ margin: 0, fontWeight: 600 }}>{label}</label>}
-      <input 
-        type="text" 
-        name={name} 
-        value={val || ''} 
-        onChange={onChange} 
-        maxLength={maxLength}
-        tabIndex={ti}
+    <div className="flex-row gap-1" style={{ marginRight: 'var(--sp-2)' }}>
+      {label && <label style={{ margin: 0, fontWeight: 600, fontSize: 'var(--fs-value)', whiteSpace: 'nowrap' }}>{label}</label>}
+      <input type="text" name={name} value={val || ''} onChange={onChange} onKeyDown={handleEnterKey}
+        maxLength={maxLength} tabIndex={ti}
         className={`inline-metric-input ${!val ? 'field-empty' : ''}`}
-        style={{ width: '50px', padding: '0.3rem', fontSize: '0.9rem', textAlign: 'center', borderRadius: '4px', color: '#0f172a', background: '#ffffff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }} 
       />
     </div>
   );
@@ -164,19 +158,23 @@ export const InlineMetric = ({ label, name, maxLength = 3, ti }: any) => {
 export const TwoWayCheck = ({ label, name, options, detailOption, detailName, ti }: any) => {
   const { val, onValueChange } = useFieldMapping(name);
   const { val: detailVal, onChange: onDetailChange } = useFieldMapping(detailName || 'nothing');
-  
+
   return (
-    <div className="form-group" style={{ margin: label ? '0 0 0.5rem 0' : '0' }}>
+    <div className="form-group">
       {label && <label>{label}</label>}
-      <div className={`twoway-group ${val ? 'field-done' : 'field-pending'}`} style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className={`twoway-group ${val ? 'field-done' : 'field-pending'}`} style={{ display: 'flex', gap: 'var(--sp-3)', alignItems: 'center', flexWrap: 'wrap' }}>
         {options.map((opt: string, i: number) => (
-          <div key={opt} style={{ display: 'flex', alignItems: 'center' }}>
-            <label style={{display:'inline-flex', alignItems:'center', gap:'6px', cursor:'pointer', fontSize:'0.9rem', color: '#0f172a', fontWeight: 500, margin: 0}}>
-              <input type="checkbox" checked={val === opt} tabIndex={ti ? ti + i : undefined} onChange={(e) => onValueChange(e.target.checked ? opt : '')} style={{margin:0, transform: 'scale(1.1)'}} /> 
+          <div key={opt} className="flex-row gap-1">
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', color: 'var(--c-text)', fontWeight: 500, margin: 0 }}>
+              <input type="checkbox" checked={val === opt} tabIndex={ti ? ti + i : undefined} onChange={(e) => onValueChange(e.target.checked ? opt : '')} style={{ margin: 0, transform: 'scale(1.1)' }} />
               {opt}
             </label>
             {val === detailOption && opt === detailOption && detailName && (
-              <input type="text" name={detailName} value={detailVal||''} onChange={onDetailChange} tabIndex={ti ? ti + 2 : undefined} placeholder="Précisez..." className="detail-fade" style={{marginLeft: '0.5rem', width: '130px', padding:'0.2rem 0.4rem', fontSize:'0.85rem', border:'1px solid #cbd5e1', borderRadius:'4px'}} />
+              <input type="text" name={detailName} value={detailVal || ''} onChange={onDetailChange} onKeyDown={handleEnterKey}
+                tabIndex={ti ? ti + 2 : undefined} placeholder="Précisez..."
+                className="detail-fade"
+                style={{ width: '120px', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }}
+              />
             )}
           </div>
         ))}
@@ -189,28 +187,18 @@ export const CephInput = ({ label, name, normStr, ideal, dev }: { label: string,
   const { val, onChange } = useFieldMapping(name);
   const valNum = parseFloat((val || '').replace(',', '.'));
   const isError = !isNaN(valNum) && (valNum < ideal - dev || valNum > ideal + dev);
-  
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 1fr) 100px', alignItems: 'center', gap: '1rem', justifyItems: 'end' }}>
-      <div style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: '0.3rem' }}>
-        <span style={{ color: '#0f172a', fontWeight: 500, fontSize: '0.85rem' }}>{label}</span>
-        <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 400 }}>({normStr})</span>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) 80px', alignItems: 'center', gap: 'var(--sp-2)', justifyItems: 'end' }}>
+      <div style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: '4px' }}>
+        <span style={{ fontWeight: 500, fontSize: 'var(--fs-value)' }}>{label}</span>
+        <span style={{ color: 'var(--c-text-muted)', fontSize: 'var(--fs-small)' }}>({normStr})</span>
       </div>
-      <input 
-        type="text" inputMode="decimal"
-        name={name}
-        value={val || ''}
-        onChange={onChange}
+      <input
+        type="text" inputMode="decimal" name={name} value={val || ''} onChange={onChange} onKeyDown={handleEnterKey}
         placeholder="-"
-        style={{
-          width: '100%', padding: '0.3rem 0.5rem', fontSize: '0.9rem', textAlign: 'center',
-          border: '1px solid var(--border-color)', borderRadius: '4px',
-          color: isError ? '#dc2626' : 'var(--text-main)',
-          fontWeight: isError ? 700 : 500,
-          background: '#fff',
-          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
-        }}
-        className={!val ? 'field-empty' : ''}
+        className={`${!val ? 'field-empty' : ''} ${isError ? 'ceph-value-error' : ''}`}
+        style={{ width: '100%', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', textAlign: 'center', border: '1px solid var(--c-border)', borderRadius: 'var(--radius)', color: isError ? 'var(--c-alert)' : 'var(--c-text)', fontWeight: isError ? 700 : 500 }}
       />
     </div>
   );
@@ -219,22 +207,18 @@ export const CephInput = ({ label, name, normStr, ideal, dev }: { label: string,
 export const OpgToggle = ({ label, rasField, detailField }: { label: string, rasField: string, detailField: string }) => {
   const { val: isRAS, onChange: onRasChange } = useFieldMapping(rasField);
   const { val: details, onChange: onDetailChange } = useFieldMapping(detailField);
-  
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem', gap: '1rem', width: '100%', flexWrap: 'wrap' }}>
-      <div style={{ width: '100px', fontWeight: 600, color: '#0f172a', fontSize: '0.9rem' }}>{label}</div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, color: '#475569', minWidth: '60px' }}>
+    <div className="flex-row" style={{ marginBottom: 'var(--sp-1)', width: '100%', flexWrap: 'wrap' }}>
+      <div style={{ width: '90px', fontWeight: 600, fontSize: 'var(--fs-value)' }}>{label}</div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, color: 'var(--c-text-secondary)', minWidth: '50px' }}>
         <input type="checkbox" name={rasField} checked={!!isRAS} onChange={onRasChange} style={{ transform: 'scale(1.1)', margin: 0 }} /> RAS
       </label>
       {!isRAS && (
-        <input 
-             type="text" 
-             name={detailField} 
-             value={details || ''} 
-             onChange={onDetailChange} 
-             placeholder="Précisez..." 
-             className="detail-fade"
-             style={{flex: 1, minWidth: '140px', padding:'0.2rem 0.4rem', fontSize:'0.85rem', border:'1px solid #cbd5e1', borderRadius:'4px', backgroundColor: '#fff'}} 
+        <input type="text" name={detailField} value={details || ''} onChange={onDetailChange} onKeyDown={handleEnterKey}
+          placeholder="Précisez..."
+          className="detail-fade"
+          style={{ flex: 1, minWidth: '120px', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }}
         />
       )}
     </div>

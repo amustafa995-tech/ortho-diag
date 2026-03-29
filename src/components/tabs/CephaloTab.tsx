@@ -1,7 +1,16 @@
 
+import { useStore } from '../../store/useStore';
 import { CephInput, OpgToggle } from '../ui/Forms';
 
+const CVM_OPTIONS = ["CS1","CS2","CS3","CS4","CS5","CS6"];
+
 export default function CephaloTab() {
+  const patient = useStore(state => state.patient);
+  const s = patient.sessions.find(s => s.id === patient.activeSessionId) || patient.sessions[0];
+  const updateSessionField = useStore(state => state.updateSessionField);
+
+  if (!s) return null;
+
   return (
     <div className="module-content">
       <div className="module-header" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -10,9 +19,23 @@ export default function CephaloTab() {
 
       <div className="card" style={{ marginBottom: '1rem', padding: '1rem', maxWidth: '500px' }}>
         <div className="card-header"><h3 style={{fontSize:'1.1rem', marginBottom:'1.5rem'}}>1. Analyse Céphalométrique</h3></div>
-        
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginBottom: '0.75rem' }}>
+          <label style={{ fontSize: 'var(--fs-label)', fontWeight: 500, color: 'var(--c-text-secondary)', whiteSpace: 'nowrap', margin: 0 }}>Maturation (CVM)</label>
+          <select
+            name="stadeMaturation"
+            tabIndex={500}
+            value={s.stadeMaturation || ''}
+            onChange={e => updateSessionField(patient.activeSessionId, 'stadeMaturation', e.target.value)}
+            style={{ height: '30px', padding: '0 var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)', fontFamily: 'inherit', background: '#fff' }}
+          >
+            <option value="">-</option>
+            {CVM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          
+
           {/* Sagittal Row */}
           <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', gap: '0.5rem', paddingBottom: '0.4rem', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>Sagittal</div>

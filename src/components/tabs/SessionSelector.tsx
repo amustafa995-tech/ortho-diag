@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import { initialSession } from '../../store/useStore';
 
@@ -9,9 +9,18 @@ export default function SessionSelector() {
   const setActiveSession = useStore(state => state.setActiveSession);
   const addSession = useStore(state => state.addSession);
   const deleteSession = useStore(state => state.deleteSession);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isModalOpen, closeModal]);
 
   const handleAddSession = () => {
     const newId = `T${sessions.length}`;

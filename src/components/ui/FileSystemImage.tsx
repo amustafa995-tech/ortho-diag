@@ -8,25 +8,20 @@ export function FileSystemImage({ fileName }: { fileName: string }) {
   const patientDirectory = useStore(state => state.patientDirectory);
 
   useEffect(() => {
-    // Si c'est déjà une URL Blob générée en POC
+    let cancelled = false;
+
     if (fileName.startsWith('blob:')) {
       setSrc(fileName);
       return;
     }
 
-    // Sinon c'est un nom de fichier sur le disque physique
     if (isHubConnected && patientDirectory) {
-      let activeUrl: string | null = null;
       fileSystem.getMediaUrl(patientDirectory, fileName).then(url => {
-        if (url) {
-          activeUrl = url;
-          setSrc(url);
-        }
+        if (url && !cancelled) setSrc(url);
       });
-      return () => {
-        if (activeUrl) fileSystem.revokeMediaUrl(activeUrl);
-      };
     }
+
+    return () => { cancelled = true; };
   }, [fileName, isHubConnected, patientDirectory]);
 
   if (!src) return <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#f1f5f9', color:'#94a3b8', fontSize:'0.7rem'}}>Chargement...</div>;

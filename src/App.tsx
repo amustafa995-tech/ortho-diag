@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from './store/useStore';
 import InfoTab from './components/tabs/InfoTab';
 import DocumentationTab from './components/tabs/DocumentationTab';
@@ -11,6 +11,44 @@ import SessionSelector from './components/tabs/SessionSelector';
 import PatientHub from './components/views/PatientHub';
 import { fileSystem } from './services/FileSystemService';
 
+type SaveStatus = 'saved' | 'saving' | 'idle';
+
+function useCompletionBadges(patient: ReturnType<typeof useStore>['patient']) {
+  const s = patient.sessions.find(s => s.id === patient.activeSessionId) || patient.sessions[0];
+  if (!s) return { info: '0', docs: '0', clin: '0', moul: '0', radio: '0' };
+
+  const countFilled = (fields: string[], obj: any) => fields.filter(f => !!obj[f]).length;
+
+  const infoFields = ['nom', 'prenom', 'sexe', 'dateNaissance', 'avs', 'medecinTraitant'];
+  const infoTotal = infoFields.length;
+  const infoDone = countFilled(infoFields, patient);
+
+  const clinFields = ['face','symetrieVisage','profil','angleNasolabial','angleLabiomental','troisQuarts','gummySmile','symetrieSourire','competenceLabiale','expoIncisives','overjet','classeCanineD','classeCanineG','classeMolaireD','classeMolaireG','overbite','cdsD','cdsG','lm','hygieneClin','phenotype'];
+  const clinTotal = clinFields.length;
+  const clinDone = countFilled(clinFields, s);
+
+  const moulFields = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26','t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
+  const moulTotal = moulFields.length;
+  const moulDone = countFilled(moulFields, s);
+
+  const radioFields = ['sna','snb','anb','wits','snSpaspp','spasppMego','snMego','incisifSn','incisifSpaspp','incisifMego','incisifIncisif','stadeMaturation'];
+  const radioTotal = radioFields.length;
+  const radioDone = countFilled(radioFields, s);
+
+  const docsArrays = ['photosExtra','photosIntra','modelesStl','cephaloImages','opgImages','radioIntraImages'] as const;
+  const docsCount = docsArrays.reduce((sum, k) => sum + ((s as any)[k]?.length || 0), 0);
+
+  const fmt = (done: number, total: number) => done === 0 ? '0' : done === total ? 'ok' : `${done}`;
+
+  return {
+    info: fmt(infoDone, infoTotal),
+    docs: docsCount > 0 ? `${docsCount}` : '0',
+    clin: fmt(clinDone, clinTotal),
+    moul: fmt(moulDone, moulTotal),
+    radio: fmt(radioDone, radioTotal),
+  };
+}
+
 export default function App() {
   const activeTab = useStore(state => state.activeTab);
   const setActiveTab = useStore(state => state.setActiveTab);
@@ -18,31 +56,48 @@ export default function App() {
   const isHubConnected = useStore(state => state.isHubConnected);
   const patientDirectory = useStore(state => state.patientDirectory);
   const setPatientDirectory = useStore(state => state.setPatientDirectory);
+  const lastSavedRef = useRef<string>('');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 
-  // Keyboard shortcut listener
+  const badges = useCompletionBadges(patient);
+
+  const forceSave = useCallback(() => {
+    if (!isHubConnected || !patientDirectory) return;
+    setSaveStatus('saving');
+    fileSystem.savePatientData(patientDirectory, patient)
+      .then(() => { lastSavedRef.current = JSON.stringify(patient); setSaveStatus('saved'); })
+      .catch(() => setSaveStatus('idle'));
+  }, [isHubConnected, patientDirectory, patient]);
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Shortcuts without Ctrl on Mac
       if (e.ctrlKey || e.metaKey) {
         switch (e.key) {
-          case '1': e.preventDefault(); setActiveTab('overview'); break; // Mapped to overview logic (cascading)
+          case '1': e.preventDefault(); setActiveTab('info'); break;
           case '2': e.preventDefault(); setActiveTab('documents'); break;
           case '3': e.preventDefault(); setActiveTab('clinique'); break;
           case '4': e.preventDefault(); setActiveTab('moulages'); break;
           case '5': e.preventDefault(); setActiveTab('cepha'); break;
+          case 's': e.preventDefault(); forceSave(); break;
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveTab]);
+  }, [setActiveTab, forceSave]);
 
-  // Auto-save vers le FileSystem quand le patient change
+  // Auto-save with dirty check
   useEffect(() => {
     if (isHubConnected && patientDirectory && patient) {
+      const serialized = JSON.stringify(patient);
+      if (serialized === lastSavedRef.current) return;
+      setSaveStatus('saving');
       const timeout = setTimeout(() => {
-        fileSystem.savePatientData(patientDirectory, patient).catch(console.error);
-      }, 1000); // Debounce de 1s
+        fileSystem.savePatientData(patientDirectory, patient)
+          .then(() => { lastSavedRef.current = serialized; setSaveStatus('saved'); })
+          .catch(() => setSaveStatus('idle'));
+      }, 1000);
       return () => clearTimeout(timeout);
     }
   }, [patient, isHubConnected, patientDirectory]);
@@ -59,99 +114,100 @@ export default function App() {
     }
   }
 
-  // Si on utilise l'API Fichier, obliger la connexion au hub
   if (!isHubConnected || !patientDirectory) {
     return <PatientHub />;
   }
 
+  const badgeClass = (val: string) => val === 'ok' ? 'nav-badge done' : val === '0' ? 'nav-badge' : 'nav-badge partial';
+
+  const tabs = [
+    { id: 'info', label: '1. Informations', key: '1', badge: badges.info },
+    { id: 'documents', label: '2. Documents', key: '2', badge: badges.docs },
+    { id: 'clinique', label: '3. Clinique', key: '3', badge: badges.clin },
+    { id: 'moulages', label: '4. Moulage', key: '4', badge: badges.moul },
+    { id: 'cepha', label: '5. Radio', key: '5', badge: badges.radio },
+  ];
+
   return (
     <div className="app-container">
       <aside className="sidebar no-print">
-        <div className="sidebar-header" style={{padding: '1.5rem 1rem'}}>
-          <h1 style={{fontSize:'1.1rem', margin:0, color:'var(--primary-color)'}}>OrthoDiag</h1>
-          <button 
-            onClick={() => { setPatientDirectory(null); setActiveTab('overview'); }} 
-            style={{ width: '100%', padding: '0.4rem', fontSize: '0.8rem', marginTop: '1rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
-          >
+        <div className="sidebar-header">
+          <h1 className="sidebar-brand">OrthoDiag</h1>
+          <button className="btn-back" onClick={() => { setPatientDirectory(null); setActiveTab('overview'); }}>
             ← Changer de Dossier
           </button>
         </div>
-        <div style={{ padding: '0 1rem', marginTop: '1rem' }}>
-          <div 
-            onClick={() => setActiveTab('overview')}
-            title="Vue Globale de la Session"
-            style={{ padding: '0.75rem', backgroundColor: '#f1f5f9', borderRadius: '4px', borderLeft: '3px solid var(--primary-color)', cursor: 'pointer', transition: 'background-color 0.2s' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-          >
-            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mise à jour VDDS : Auto</p>
-            <p style={{ margin: '2px 0', fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 700 }}>{patient.nom || 'Patient'} {patient.prenom}</p>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sexe: {patient.sexe||'-'} | Âge: {ageCalcule||'-'}</p>
-          </div>
+
+        <div
+          className="sidebar-patient-card"
+          onClick={() => setActiveTab('overview')}
+          title="Vue Globale"
+        >
+          <p className="sidebar-patient-name">{patient.nom || 'Patient'} {patient.prenom}</p>
+          <p className="sidebar-patient-meta">
+            {patient.sexe || '-'} | {ageCalcule || '-'} | {patient.id}
+          </p>
         </div>
-        
+
+        <div className="save-indicator">
+          <span className={`save-dot ${saveStatus === 'saving' ? 'saving' : ''}`} />
+          {saveStatus === 'saving' ? 'Sauvegarde...' : saveStatus === 'saved' ? 'Sauvegardé' : 'Auto-save'}
+          <span style={{ marginLeft: 'auto', opacity: 0.5 }}>Ctrl+S</span>
+        </div>
+
         <nav className="sidebar-nav">
-          <button tabIndex={-1} className={`nav-item ${activeTab === 'info' ? 'active' : ''}`} onClick={() => setActiveTab('info')} style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <span>1. Informations</span>
-            <span style={{fontSize:'0.65rem', opacity:0.5}}>Ctrl+1</span>
-          </button>
-          <button tabIndex={-1} className={`nav-item ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => setActiveTab('documents')} style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <span>2. Doc. Clinique</span>
-            <span style={{fontSize:'0.65rem', opacity:0.5}}>Ctrl+2</span>
-          </button>
-          <button tabIndex={-1} className={`nav-item ${activeTab === 'clinique' ? 'active' : ''}`} onClick={() => setActiveTab('clinique')} style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <span>3. Analyse Clinique</span>
-            <span style={{fontSize:'0.65rem', opacity:0.5}}>Ctrl+3</span>
-          </button>
-          <button tabIndex={-1} className={`nav-item ${activeTab === 'moulages' ? 'active' : ''}`} onClick={() => setActiveTab('moulages')} style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <span>4. Analyse Moulage</span>
-            <span style={{fontSize:'0.65rem', opacity:0.5}}>Ctrl+4</span>
-          </button>
-          <button tabIndex={-1} className={`nav-item ${activeTab === 'cepha' ? 'active' : ''}`} onClick={() => setActiveTab('cepha')} style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <span>5. Analyse Radio.</span>
-            <span style={{fontSize:'0.65rem', opacity:0.5}}>Ctrl+5</span>
-          </button>
-          
-          <div style={{ flex: 1 }}></div>
-          
-          <button tabIndex={-1} className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')} style={{marginBottom: '0.5rem', fontSize: '0.9rem', border: '1px solid var(--border-color)', justifyContent: 'center'}}>
-            Réglages Serveur
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              tabIndex={-1}
+              className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <span className="nav-label">{tab.label}</span>
+              <span className={badgeClass(tab.badge)}>{tab.badge === 'ok' ? '✓' : tab.badge}</span>
+              <span className="nav-shortcut">{tab.key}</span>
+            </button>
+          ))}
+
+          <div style={{ flex: 1 }} />
+
+          <button
+            tabIndex={-1}
+            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+            style={{ border: '1px solid var(--c-border)', justifyContent: 'center' }}
+          >
+            Réglages
           </button>
         </nav>
       </aside>
 
       <main className="main-content">
-        <div className="module-container" style={{maxWidth: '1200px'}}>
-
-          {/* En-tête global pour les actions de session (sauf pour Réglage) */}
+        <div className="module-container" style={{ maxWidth: '1100px' }}>
           {activeTab !== 'settings' && (
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-               <SessionSelector />
-               
-               {(activeTab === 'moulages' || activeTab === 'cepha') && (
-                 <label className="btn" style={{padding:'0.5rem 1rem', fontSize:'0.85rem', background:'#e2e8f0', color:'#0f172a', border:'1px solid #cbd5e1', cursor:'pointer', fontWeight:600}}>
-                    <input type="file" accept=".xlsx,.xls,.csv" style={{display:'none'}} onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        alert(`Fichier détecté : ${e.target.files[0].name}\n\nFonction Import Automatique prévue pour la Phase 4 !`);
-                        e.target.value = ''; 
-                      }
-                    }}/>
-                    Importer Excel / CSV
-                 </label>
-               )}
+            <div className="session-bar no-print">
+              <SessionSelector />
+              {(activeTab === 'moulages' || activeTab === 'cepha') && (
+                <label className="btn btn-outline" style={{ cursor: 'pointer' }}>
+                  <input type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      alert(`Fichier détecté : ${e.target.files[0].name}\n\nImport prévu Phase 4.`);
+                      e.target.value = '';
+                    }
+                  }} />
+                  Importer Excel / CSV
+                </label>
+              )}
             </div>
           )}
 
-          {/* Rendu dynamique des onglets */}
           {activeTab === 'overview' && <OverviewTab />}
           {activeTab === 'info' && <InfoTab />}
           {activeTab === 'documents' && <DocumentationTab />}
           {activeTab === 'clinique' && <ClinicalTab />}
           {activeTab === 'moulages' && <MoulageTab />}
           {activeTab === 'cepha' && <CephaloTab />}
-          
           {activeTab === 'settings' && <SettingsTab />}
-
         </div>
       </main>
     </div>
