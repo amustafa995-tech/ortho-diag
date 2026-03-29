@@ -177,7 +177,7 @@ export default function MoulageTab() {
         <Select label="Arcade Inf." name="formeArcadeInf" options={["Ovoïde", "Triangulaire", "Carrée"]} ti={391} />
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+      <div className="card">
         <div className="card-header">
           <h3>Dimensions mésio-distales</h3>
           <span className={`completion-badge ${allFilled ? 'complete' : ''}`}>{MAX_TEETH_KEYS.filter(k=>n(k)>0).length + MAND_TEETH_KEYS.filter(k=>n(k)>0).length}/24</span>
@@ -198,7 +198,7 @@ export default function MoulageTab() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+      <div className="card">
         <div className="card-header">
           <h3>Espace Disponible</h3>
           <span className={`completion-badge ${['dispSup1513','dispSup1211','dispSup2122','dispSup2325','dispInf4543','dispInf4241','dispInf3132','dispInf3335'].every(k=>n(k)>0) ? 'complete' : ''}`}>{['dispSup1513','dispSup1211','dispSup2122','dispSup2325','dispInf4543','dispInf4241','dispInf3132','dispInf3335'].filter(k=>n(k)>0).length}/8</span>
@@ -215,7 +215,7 @@ export default function MoulageTab() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+      <div className="card">
         <div className="card-header">
           <h3>Bilan de Place</h3>
           {isMixte && <span style={{fontSize:'0.7rem', color:'#f59e0b', fontWeight:600}}>Droschl appliqué aux secteurs C+PM</span>}
@@ -265,7 +265,7 @@ export default function MoulageTab() {
         </table>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+      <div className="card">
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: '2rem' }}>
           <div>
             <div className="card-header"><h3 style={{fontSize:'1rem'}}>Index de Bolton</h3></div>
@@ -340,7 +340,7 @@ export default function MoulageTab() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+      <div className="card">
         <div className="card-header">
           <h3>Distances</h3>
           <span className={`completion-badge ${['distInterMolSup','distInterMolInf','distPMSup','distPMInf','distCanSup','distCanInf'].every(k=>n(k)>0) ? 'complete' : ''}`}>{['distInterMolSup','distInterMolInf','distPMSup','distPMInf','distCanSup','distCanInf'].filter(k=>n(k)>0).length}/6</span>

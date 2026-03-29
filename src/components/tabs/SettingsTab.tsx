@@ -65,7 +65,7 @@ export default function SettingsTab() {
     <div className="module-content">
       <div className="module-header"><h2>5. Réglages & Intégration</h2></div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1.5rem', borderLeft: '4px solid #10b981' }}>
+      <div className="card" style={{ borderLeft: '4px solid #10b981' }}>
         <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#0f172a' }}>Source des Données Administratives (Patient)</h3>
         <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
           Pour garantir la conformité LPD (Suisse), choisissez le mode de stockage et de synchronisation des données d'identité du patient. Les données cliniques restent exclusivement locales.
@@ -123,7 +123,7 @@ export default function SettingsTab() {
       </div>
 
       {/* ── Clinic Info ── */}
-      <div className="card" style={{ marginBottom: '1rem', padding: '1.5rem', borderLeft: '4px solid #8b5cf6' }}>
+      <div className="card" style={{ borderLeft: '4px solid #8b5cf6' }}>
         <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#0f172a' }}>Informations de la Clinique</h3>
         <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
           Ces informations sont utilisées pour la génération automatique de documents (courriers, devis, demandes d'assurance).

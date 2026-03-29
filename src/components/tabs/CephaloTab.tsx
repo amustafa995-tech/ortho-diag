@@ -17,7 +17,7 @@ export default function CephaloTab() {
          <h2 style={{ margin: 0 }}>5. Analyse Radio</h2>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', maxWidth: '600px' }}>
+      <div className="card" style={{ maxWidth: '600px' }}>
         <div className="card-header"><h3>1. Analyse Céphalométrique</h3></div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginBottom: '0.75rem' }}>
@@ -72,7 +72,7 @@ export default function CephaloTab() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', maxWidth: '600px' }}>
+      <div className="card" style={{ maxWidth: '600px' }}>
         {(() => {
           const opgReviewed = !s.opgPresenceRas || !s.opgPositionRas || !s.opgProportionRas || !s.opgPathologieRas
             || !!s.opgPresence || !!s.opgPosition || !!s.opgProportion || !!s.opgPathologie || !!s.opgRemarque;
