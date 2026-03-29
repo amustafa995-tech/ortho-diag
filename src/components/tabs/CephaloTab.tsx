@@ -1,6 +1,6 @@
 
 import { useStore } from '../../store/useStore';
-import { CephInput, OpgToggle } from '../ui/Forms';
+import { CephInput, OpgToggle, Checkbox, ClinicalToggle } from '../ui/Forms';
 
 const CVM_OPTIONS = ["CS1","CS2","CS3","CS4","CS5","CS6"];
 
@@ -17,8 +17,8 @@ export default function CephaloTab() {
          <h2 style={{ margin: 0 }}>5. Analyse Radio</h2>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', maxWidth: '500px' }}>
-        <div className="card-header"><h3 style={{fontSize:'1.1rem', marginBottom:'1.5rem'}}>1. Analyse Céphalométrique</h3></div>
+      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', maxWidth: '600px' }}>
+        <div className="card-header"><h3>1. Analyse Céphalométrique</h3></div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginBottom: '0.75rem' }}>
           <label style={{ fontSize: 'var(--fs-label)', fontWeight: 500, color: 'var(--c-text-secondary)', whiteSpace: 'nowrap', margin: 0 }}>Maturation (CVM)</label>
@@ -72,7 +72,7 @@ export default function CephaloTab() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', maxWidth: '600px' }}>
         {(() => {
           const opgReviewed = !s.opgPresenceRas || !s.opgPositionRas || !s.opgProportionRas || !s.opgPathologieRas
             || !!s.opgPresence || !!s.opgPosition || !!s.opgProportion || !!s.opgPathologie || !!s.opgRemarque;
@@ -83,11 +83,67 @@ export default function CephaloTab() {
             </div>
           );
         })()}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.5rem' }}>
            <OpgToggle label="Présence" rasField="opgPresenceRas" detailField="opgPresence" />
+           {!s.opgPresenceRas && (
+             <div className="ins-sub-items">
+               <div className="ins-row" style={{ flexWrap: 'wrap' }}>
+                 <ClinicalToggle label="Anodontie (206)" stateField="hasAnodontie" detailField="anodontieDents" />
+                 <span className="ins-desc">— Absence congénitale de dents</span>
+               </div>
+               <div className="ins-row">
+                 <Checkbox label="Hyperodontie (207)" name="hasHyperodontie" />
+                 <span className="ins-desc">— Dents surnuméraires</span>
+               </div>
+               <div className="ins-row" style={{ flexWrap: 'wrap' }}>
+                 <ClinicalToggle label="Agénésie canine/incisive (HG)" stateField="hasAgenesieImportante" detailField="agenesieImportanteDents" />
+                 <span className="ins-desc">— Canines ou incisives absentes</span>
+               </div>
+             </div>
+           )}
            <OpgToggle label="Position" rasField="opgPositionRas" detailField="opgPosition" />
+           {!s.opgPositionRas && (
+             <div className="ins-sub-items">
+               <div className="ins-row">
+                 <Checkbox label="Ankylose molaires de lait (HG)" name="hasAnkyloseLait" />
+                 <span className="ins-desc">— Dents temporaires fusionnées à l'os</span>
+               </div>
+               <div className="ins-row">
+                 <Checkbox label="Rétention / retard éruptif (HG)" name="hasRetentionDent" />
+                 <span className="ins-desc">— Dent incluse ou retard d'éruption</span>
+               </div>
+             </div>
+           )}
            <OpgToggle label="Proportion" rasField="opgProportionRas" detailField="opgProportion" />
            <OpgToggle label="Pathologie" rasField="opgPathologieRas" detailField="opgPathologie" />
+           {!s.opgPathologieRas && (
+             <div className="ins-sub-items">
+               <div className="ins-row">
+                 <Checkbox label="Dysplasie dentaire (205)" name="hasDysplasieDentaire" />
+                 <span className="ins-desc">— Malformation émail/dentine</span>
+               </div>
+               <div className="ins-row">
+                 <Checkbox label="Rétention / Ankylose (218)" name="hasRetentionAnkylose" />
+                 <span className="ins-desc">— Dent permanente bloquée/fusionnée</span>
+               </div>
+               <div className="ins-row">
+                 <Checkbox label="Rhizalyse (HG)" name="hasRhizalyse" />
+                 <span className="ins-desc">— Résorption radiculaire pathologique</span>
+               </div>
+               <div className="ins-row">
+                 <Checkbox label="Dislocation / inclusion path. (17a)" name="has17a" />
+                 <span className="ins-desc">— Kyste, résorption, refoulement adjacent</span>
+               </div>
+               <div className="ins-row">
+                 <Checkbox label="Dents surnuméraires path. (17c)" name="has17c" />
+                 <span className="ins-desc">— Déplacement ou résorption</span>
+               </div>
+               <div className="ins-row">
+                 <Checkbox label="Néoformations (17e)" name="has17e" />
+                 <span className="ins-desc">— Tumeurs bénignes/malignes</span>
+               </div>
+             </div>
+           )}
         </div>
       </div>
     </div>

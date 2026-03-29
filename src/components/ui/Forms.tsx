@@ -2,10 +2,11 @@
 import { useStore } from '../../store/useStore';
 
 const GLOBAL_KEYS = [
-  'id','nom','prenom','pratique','sexe','dateNaissance','datePremiereConsult','age','avs','compOrtho','medecinTraitant','medecinDentaire','autreInfo',
+  'id','nom','prenom','pratique','sexe','dateNaissance','datePremiereConsult','age','avs','compOrtho','caisseMaladie','numGarantie','adresse','npaLocalite','telephone','email','representantLegal','medecinTraitant','medecinDentaire','autreInfo',
   'motifConsultation','praticien','dention','implant','implantDent','maladiesChroniques','maladiesChroniquesDetails','hasChirurgies','chirurgiesAnterieures',
   'hasTraitements','traitementsCours','allergiesMedic','hasAutreGen','autreGen','antecFamExtract','carieRecurrente','sensibilite','hasOrthoPasse','traitementsOrthoPasses',
-  'hasAutreDent','autreDent','autreAntecDent','mauvaisesHabitudes','documents'
+  'hasAutreDent','autreDent','autreAntecDent','mauvaisesHabitudes','documents','extractionDetails',
+  'hasFente','hasMacroglossie','hasSAOS','hasTroublesDeglutitionGrave','hasAsymetrieGrave','has17d'
 ];
 
 const focusNext = (current: HTMLElement) => {
@@ -189,17 +190,15 @@ export const CephInput = ({ label, name, normStr, ideal, dev }: { label: string,
   const isError = !isNaN(valNum) && (valNum < ideal - dev || valNum > ideal + dev);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) 80px', alignItems: 'center', gap: 'var(--sp-2)', justifyItems: 'end' }}>
-      <div style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'baseline', gap: '4px' }}>
-        <span style={{ fontWeight: 500, fontSize: 'var(--fs-value)' }}>{label}</span>
-        <span style={{ color: 'var(--c-text-muted)', fontSize: 'var(--fs-small)' }}>({normStr})</span>
-      </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '100px 60px 1fr', alignItems: 'center', gap: 'var(--sp-2)' }}>
+      <span style={{ fontWeight: 500, fontSize: 'var(--fs-value)', textAlign: 'right' }}>{label}</span>
       <input
         type="text" inputMode="decimal" name={name} value={val || ''} onChange={onChange} onKeyDown={handleEnterKey}
         placeholder="-"
         className={`${!val ? 'field-empty' : ''} ${isError ? 'ceph-value-error' : ''}`}
         style={{ width: '100%', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', textAlign: 'center', border: '1px solid var(--c-border)', borderRadius: 'var(--radius)', color: isError ? 'var(--c-alert)' : 'var(--c-text)', fontWeight: isError ? 700 : 500 }}
       />
+      <span style={{ color: 'var(--c-text-muted)', fontSize: 'var(--fs-small)' }}>({normStr})</span>
     </div>
   );
 };

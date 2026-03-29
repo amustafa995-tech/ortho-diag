@@ -37,6 +37,26 @@ function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { 
   // ═══ AI ═══
   const ai: InsuranceResult[] = [];
 
+  // 201/202 - Fente labiale/palatine
+  if (patient.hasFente) {
+    ai.push({ code: '201/202', label: 'Fente labiale/palatine', status: under20 ? 'eligible' : 'none', detail: 'Fente déclarée (anamnèse)' });
+  }
+
+  // 205 - Dysplasie dentaire
+  if (s.hasDysplasieDentaire) {
+    ai.push({ code: '205', label: 'Dysplasie dentaire', status: under20 ? 'eligible' : 'none', detail: 'Dysplasie déclarée (OPG)' });
+  }
+
+  // 206 - Anodontie
+  if (s.hasAnodontie) {
+    ai.push({ code: '206', label: 'Anodontie', status: under20 ? 'eligible' : 'none', detail: `Anodontie${s.anodontieDents ? ` : ${s.anodontieDents}` : ''}` });
+  }
+
+  // 207 - Hyperodontie
+  if (s.hasHyperodontie) {
+    ai.push({ code: '207', label: 'Hyperodontie', status: under20 ? 'eligible' : 'none', detail: 'Hyperodontie déclarée (OPG)' });
+  }
+
   // 208 - Micromandibulie
   if (anb !== null && snMego !== null) {
     if (anb >= criteria.ai208_anb) {
@@ -49,6 +69,10 @@ function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { 
     if (anb === null) miss.push('ANB');
     if (snMego === null) miss.push('SN-MeGo');
     ai.push({ code: '208', label: 'Micromandibulie?', status: 'missing', detail: `OJ=${oj}mm (screening ≥${criteria.ai208_overjet_screen}mm)`, missing: miss });
+  }
+  // 208 - Articulé ciseaux (clinical)
+  if (s.hasArticuleCiseaux) {
+    ai.push({ code: '208', label: 'Articulé en ciseaux', status: under20 ? 'eligible' : 'none', detail: 'Articulé ciseaux déclaré (clinique)' });
   }
 
   // 209 - Mordex apertus / clausus
@@ -64,6 +88,10 @@ function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { 
       ai.push({ code: '209', label: 'Mordex clausus (combo)', status: under20 ? 'eligible' : 'none', detail: `SN-MeGo=${snMego}° + ANB=${anb}°` });
     }
   }
+  // 209a - Béance incisives (clinical)
+  if (s.hasBeanceIncisives) {
+    ai.push({ code: '209a', label: 'Béance incisives', status: under20 ? 'eligible' : 'none', detail: 'Béance ant. déclarée (clinique)' });
+  }
 
   // 210 - Prognathie inférieure
   if (anb !== null) {
@@ -74,13 +102,45 @@ function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { 
     }
   }
 
+  // 214 - Macroglossie
+  if (patient.hasMacroglossie) {
+    ai.push({ code: '214', label: 'Macroglossie', status: under20 ? 'eligible' : 'none', detail: 'Macroglossie déclarée (anamnèse)' });
+  }
+
+  // 218 - Rétention/Ankylose
+  if (s.hasRetentionAnkylose) {
+    ai.push({ code: '218', label: 'Rétention/Ankylose', status: under20 ? 'eligible' : 'none', detail: 'Rétention/Ankylose déclarée (OPG)' });
+  }
+
   if (!under20 && ageYears !== null) {
     ai.forEach(r => { if (r.status === 'none') r.detail += ' (> 20 ans)'; });
   }
 
   // ═══ LaMal ═══
   const lamal: InsuranceResult[] = [];
-  // LaMal covers same congenital malformations as AI but after 20 years
+
+  // Art. 17a - Dislocations / inclusions pathologiques (kyste, résorption, refoulement)
+  if (s.has17a) lamal.push({ code: '17a', label: 'Dislocation / inclusion path.', status: 'eligible', detail: 'Dent incluse avec pathologie associée (kyste, résorption, refoulement)' });
+
+  // Art. 17b - Parodontite juvénile
+  if (s.has17b) lamal.push({ code: '17b', label: 'Parodontite juvénile', status: 'eligible', detail: 'Parodontite juvénile déclarée (clinique)' });
+
+  // Art. 17c - Dents surnuméraires pathologiques
+  if (s.has17c) lamal.push({ code: '17c', label: 'Dents surnuméraires path.', status: 'eligible', detail: 'Dents surnuméraires pathologiques (OPG)' });
+
+  // Art. 17d - Dysgnathie fonctionnelle (ATM)
+  if (patient.has17d) lamal.push({ code: '17d', label: 'Dysgnathie (ATM)', status: 'eligible', detail: 'Dysgnathie fonctionnelle déclarée (ATM)' });
+  else if (s.hasAtm) lamal.push({ code: '17d', label: 'Dysgnathie (ATM)?', status: 'possible', detail: 'Désordres ATM déclarés — confirmer 17d' });
+
+  // Art. 17e - Néoformations
+  if (s.has17e) lamal.push({ code: '17e', label: 'Néoformations', status: 'eligible', detail: 'Néoformations déclarées (OPG)' });
+
+  // Art. 17f - Troubles fonctionnels graves
+  if (patient.hasSAOS) lamal.push({ code: '17f', label: 'SAOS (Apnée)', status: 'eligible', detail: 'Syndrome apnée du sommeil (anamnèse)' });
+  if (patient.hasTroublesDeglutitionGrave) lamal.push({ code: '17f', label: 'Troubles déglutition', status: 'eligible', detail: 'Troubles déglutition grave (anamnèse)' });
+  if (patient.hasAsymetrieGrave) lamal.push({ code: '17f', label: 'Asymétrie faciale grave', status: 'eligible', detail: 'Asymétrie faciale grave (anamnèse)' });
+
+  // Art. 19a - AI after 20 years (LaMal relay)
   if (ageYears !== null && ageYears >= 20) {
     ai.forEach(r => {
       if (r.status === 'none' || r.status === 'missing') {
@@ -88,8 +148,6 @@ function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { 
       }
     });
   }
-  // Dysgnathie causing functional problems
-  if (s.hasAtm) lamal.push({ code: '17f', label: 'Dysgnathie (ATM)', status: 'possible', detail: 'Désordres ATM déclarés' });
 
   // ═══ HG ═══
   const hg: InsuranceResult[] = [];
@@ -108,11 +166,26 @@ function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { 
     if (s.hasXBiteAnt || s.hasXSBitePost) {
       hg.push({ code: 'XB', label: 'Occlusion croisée', status: 'eligible', detail: [s.hasXBiteAnt && 'Ant.', s.hasXSBitePost && 'Post.'].filter(Boolean).join(' + ') });
     }
+    // Béance latéro-postérieure
+    if (s.hasBeanceLateroPost) {
+      hg.push({ code: 'BLP', label: 'Béance latéro-post.', status: 'eligible', detail: `Béance latéro-post.${s.beanceLateroPostDent ? ` : ${s.beanceLateroPostDent}` : ''}` });
+    }
     // Encombrement
     const worstDDM = Math.min(totalDDMSup ?? 0, totalDDMInf ?? 0);
     if ((totalDDMSup !== null || totalDDMInf !== null) && worstDDM <= -criteria.hg_encombrement) {
       hg.push({ code: 'ENC', label: 'Encombrement sévère', status: 'eligible', detail: `DDM=${Math.round(worstDDM*10)/10}mm` });
     }
+    // Situations intrabuccales OPG
+    if (s.hasRhizalyse) hg.push({ code: 'RHIZ', label: 'Rhizalyse', status: 'eligible', detail: 'Rhizalyse déclarée (OPG)' });
+    if (s.hasAgenesieImportante) hg.push({ code: 'AGEN', label: 'Agénésie', status: 'eligible', detail: `Agénésie${s.agenesieImportanteDents ? ` : ${s.agenesieImportanteDents}` : ''}` });
+    if (s.hasAnkyloseLait) hg.push({ code: 'ANKY', label: 'Ankylose mol. lait', status: 'eligible', detail: 'Ankylose molaires de lait (OPG)' });
+    if (s.hasRetentionDent) hg.push({ code: 'RET', label: 'Rétention/retard', status: 'eligible', detail: 'Rétention / retard éruptif (OPG)' });
+  }
+
+  // Hauteur faciale auto-detection from face field
+  if (s.face === 'Hyperdivergent' || (snMego !== null && snMego >= 37)) {
+    const detail = [s.face === 'Hyperdivergent' && 'Face hyperdivergente', snMego !== null && snMego >= 37 && `SN-MeGo=${snMego}°`].filter(Boolean).join(' + ');
+    if (!hg.some(r => r.code === 'HF') && under18) hg.push({ code: 'HF', label: 'Hauteur faciale ↑', status: 'possible', detail });
   }
 
   // ═══ Complémentaire ═══
@@ -341,6 +414,10 @@ export default function OverviewTab() {
     { label: 'Interpo. Labiale', field: 'hasInterpoLabial' },
     { label: 'Grincage', field: 'hasRincageDents' },
     { label: 'ATM', field: 'hasAtm', detail: 'atmDetails' },
+    { label: 'Paro. juvénile (17b)', field: 'has17b' },
+    { label: 'Béance incisives', field: 'hasBeanceIncisives' },
+    { label: 'Art. ciseaux', field: 'hasArticuleCiseaux' },
+    { label: 'Béance latéro-post.', field: 'hasBeanceLateroPost', detail: 'beanceLateroPostDent' },
   ];
   const activeParoHabFlags = paroHabFlags.filter(f => !!(s as any)[f.field]);
 
@@ -363,6 +440,12 @@ export default function OverviewTab() {
     patient.hasChirurgies && { label: 'Chirurgies', detail: patient.chirurgiesAnterieures },
     patient.hasTraitements && { label: 'Traitements', detail: patient.traitementsCours },
     patient.hasAutreGen && { label: 'Autre Méd.', detail: patient.autreGen },
+    patient.hasFente && { label: 'Fente (201/202)' },
+    patient.hasMacroglossie && { label: 'Macroglossie (214)' },
+    patient.hasSAOS && { label: 'SAOS (17f)' },
+    patient.hasTroublesDeglutitionGrave && { label: 'Troubles déglut. (17f)' },
+    patient.hasAsymetrieGrave && { label: 'Asymétrie grave (17f)' },
+    patient.has17d && { label: 'Dysgnathie (17d)' },
   ].filter(Boolean) as { label: string; detail?: string }[];
 
   const dentFlags: { label: string; detail?: string }[] = [
@@ -376,7 +459,7 @@ export default function OverviewTab() {
 
   // Insurance analysis
   const insurance = criteria ? analyzeInsurance(patient, s, criteria) : { ai: [], lamal: [], hg: [], complementaire: [] };
-  const allInsurance = [...insurance.ai, ...insurance.lamal, ...insurance.hg, ...insurance.complementaire];
+  const allInsurance = [...insurance.ai, ...insurance.lamal, ...insurance.hg];
   const hasEligible = allInsurance.some(r => r.status === 'eligible');
   const hasPossible = allInsurance.some(r => r.status === 'possible');
   const hasMissing = allInsurance.some(r => r.status === 'missing');
@@ -428,27 +511,21 @@ export default function OverviewTab() {
             <span key={`ai-${i}`} title={r.detail + (r.missing ? ' — Manquant: ' + r.missing.join(', ') : '')}
               className={`ov-pill ${r.status === 'eligible' ? 'ov-pill-green' : r.status === 'missing' ? 'ov-pill-amber' : 'ov-pill-muted'}`}
               style={{ fontSize: 'var(--fs-badge)' }}>
-              AI {r.code} {r.status === 'missing' && '⚠'}
+              AI {r.code} — {r.label} {r.status === 'missing' && '⚠'}
             </span>
           ))}
           {insurance.lamal.map((r, i) => (
             <span key={`lamal-${i}`} title={r.detail}
-              className={`ov-pill ${r.status === 'possible' ? 'ov-pill-blue' : r.status === 'missing' ? 'ov-pill-amber' : 'ov-pill-muted'}`}
+              className={`ov-pill ${r.status === 'eligible' ? 'ov-pill-green' : r.status === 'possible' ? 'ov-pill-blue' : r.status === 'missing' ? 'ov-pill-amber' : 'ov-pill-muted'}`}
               style={{ fontSize: 'var(--fs-badge)' }}>
-              LaMal {r.status === 'missing' && '⚠'}
+              LaMal {r.code} — {r.label} {r.status === 'missing' && '⚠'}
             </span>
           ))}
           {insurance.hg.map((r, i) => (
             <span key={`hg-${i}`} title={r.detail + (r.missing ? ' — ' + r.missing.join(', ') : '')}
               className={`ov-pill ${r.status === 'eligible' ? 'ov-pill-green' : r.status === 'possible' ? 'ov-pill-blue' : 'ov-pill-amber'}`}
               style={{ fontSize: 'var(--fs-badge)' }}>
-              HG {r.code} {r.status !== 'eligible' && '?'}
-            </span>
-          ))}
-          {insurance.complementaire.map((r, i) => (
-            <span key={`comp-${i}`} title={r.detail}
-              className="ov-pill ov-pill-blue" style={{ fontSize: 'var(--fs-badge)' }}>
-              Comp.
+              HG — {r.label} {r.status !== 'eligible' && '?'}
             </span>
           ))}
           {hasMissing && (
@@ -576,59 +653,69 @@ export default function OverviewTab() {
 
       {/* Céphalométrie */}
       <div className="overview-zone" onClick={() => setActiveTab('radio')} title="→ Analyse Radio">
-        <div className="overview-zone-title">Céphalométrie</div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-1)' }}>
-          <div className="ov-sub-title" style={{ margin: 0, paddingBottom: 0, border: 'none' }}>Sagittal</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="overview-zone-title" style={{ marginBottom: 0 }}>Céphalométrie</div>
           {s.stadeMaturation && <span className="ov-pill ov-pill-blue" style={{ fontSize: 'var(--fs-badge)' }}>{s.stadeMaturation}</span>}
         </div>
-        <table className="ov-ceph-table">
-          <tbody>
-            {['sna','snb','anb','wits'].map(f => <CephRow key={f} field={f} />)}
-          </tbody>
-        </table>
 
-        <hr className="ov-sep" />
-        <div className="ov-sub-title">Vertical</div>
-        <table className="ov-ceph-table">
+        <table className="ov-ceph-table" style={{ marginTop: 'var(--sp-1)' }}>
           <tbody>
-            {['snSpaspp','spasppMego','snMego'].map(f => <CephRow key={f} field={f} />)}
-          </tbody>
-        </table>
-
-        <hr className="ov-sep" />
-        <div className="ov-sub-title">Dentaire</div>
-        <table className="ov-ceph-table">
-          <tbody>
-            {['incisifSn','incisifSpaspp','incisifMego','incisifIncisif'].map(f => <CephRow key={f} field={f} />)}
+            <tr><td rowSpan={4} className="ov-ceph-axis">S</td>{(() => { const norm = CEPH_NORMS['sna']; const val = (s as any)['sna']; const valNum = parseFloat((val || '').replace(',', '.')); const filled = val && !isNaN(valNum); const isError = filled && (valNum < norm.ideal - norm.dev || valNum > norm.ideal + norm.dev); return <><td>{norm.label}</td><td className={isError ? 'ov-alert' : (filled ? '' : 'ov-empty')} style={isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined}>{filled ? valNum : '—'}</td><td>{norm.ideal}±{norm.dev}</td></>; })()}</tr>
+            {['snb','anb','wits'].map(f => <CephRow key={f} field={f} />)}
+            <tr><td rowSpan={3} className="ov-ceph-axis">V</td>{(() => { const norm = CEPH_NORMS['snSpaspp']; const val = (s as any)['snSpaspp']; const valNum = parseFloat((val || '').replace(',', '.')); const filled = val && !isNaN(valNum); const isError = filled && (valNum < norm.ideal - norm.dev || valNum > norm.ideal + norm.dev); return <><td>{norm.label}</td><td className={isError ? 'ov-alert' : (filled ? '' : 'ov-empty')} style={isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined}>{filled ? valNum : '—'}</td><td>{norm.ideal}±{norm.dev}</td></>; })()}</tr>
+            {['spasppMego','snMego'].map(f => <CephRow key={f} field={f} />)}
+            <tr><td rowSpan={4} className="ov-ceph-axis">D</td>{(() => { const norm = CEPH_NORMS['incisifSn']; const val = (s as any)['incisifSn']; const valNum = parseFloat((val || '').replace(',', '.')); const filled = val && !isNaN(valNum); const isError = filled && (valNum < norm.ideal - norm.dev || valNum > norm.ideal + norm.dev); return <><td>{norm.label}</td><td className={isError ? 'ov-alert' : (filled ? '' : 'ov-empty')} style={isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined}>{filled ? valNum : '—'}</td><td>{norm.ideal}±{norm.dev}</td></>; })()}</tr>
+            {['incisifSpaspp','incisifMego','incisifIncisif'].map(f => <CephRow key={f} field={f} />)}
           </tbody>
         </table>
       </div>
 
-      {/* ═══ ROW 3: PARO+HABITUDES | MOULAGE | OPG ═══ */}
+      {/* ═══ ROW 3: PARO+HABITUDES+TRAITEMENT | MOULAGE | OPG+ANAMNESE ═══ */}
 
-      {/* Paro + Habitudes */}
-      <div className="overview-zone" onClick={() => setActiveTab('clinical')} title="→ Analyse Clinique">
-        <div className="overview-zone-title">Paro & Habitudes</div>
-        <div className="ov-kv" style={{ gridTemplateColumns: '85px 1fr' }}>
-          <KV label="Hygiène" field="hygieneClin" val={s.hygieneClin} />
-          <KV label="Phénotype" field="phenotype" val={s.phenotype} />
+      {/* Col 1: Paro + Habitudes + Plan de Traitement stacked */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', minWidth: 0 }}>
+        <div className="overview-zone" onClick={() => setActiveTab('clinical')} title="→ Analyse Clinique">
+          <div className="overview-zone-title">Paro & Habitudes</div>
+          <div className="ov-kv" style={{ gridTemplateColumns: '85px 1fr' }}>
+            <KV label="Hygiène" field="hygieneClin" val={s.hygieneClin} />
+            <KV label="Phénotype" field="phenotype" val={s.phenotype} />
+          </div>
+          {(habFlags.length > 0 || activeParoHabFlags.length > 0) && (
+            <>
+              <hr className="ov-sep" />
+              <div className="ov-flags">
+                {habFlags.map(h => <span key={h} className="ov-pill ov-pill-amber">{h}</span>)}
+                {activeParoHabFlags.map(f => (
+                  <span key={f.field} className="ov-pill ov-pill-red">
+                    {f.label}{f.detail && (s as any)[f.detail] ? ` (${(s as any)[f.detail]})` : ''}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+          {habFlags.length === 0 && activeParoHabFlags.length === 0 && s.hygieneClin && (
+            <div style={{ marginTop: 'var(--sp-1)' }}><span className="ov-pill ov-pill-green">RAS</span></div>
+          )}
         </div>
-        {(habFlags.length > 0 || activeParoHabFlags.length > 0) && (
-          <>
-            <hr className="ov-sep" />
-            <div className="ov-flags">
-              {habFlags.map(h => <span key={h} className="ov-pill ov-pill-amber">{h}</span>)}
-              {activeParoHabFlags.map(f => (
-                <span key={f.field} className="ov-pill ov-pill-red">
-                  {f.label}{f.detail && (s as any)[f.detail] ? ` (${(s as any)[f.detail]})` : ''}
-                </span>
+
+        {/* Plan de Traitement */}
+        {(plans.length > 0 || remarques) && (
+          <div className="overview-zone" style={{ flex: 1 }} onClick={() => setActiveTab('traitement')} title="→ Plan de Traitement">
+            <div className="overview-zone-title">Plan de Traitement</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: 'var(--fs-small)' }}>
+              {plans.map(p => (
+                <div key={p.num} style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'baseline' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--c-primary)', minWidth: '18px', textAlign: 'right' }}>{p.num}.</span>
+                  <span>{p.text}</span>
+                </div>
               ))}
+              {remarques && (
+                <div style={{ marginTop: 'var(--sp-1)', paddingTop: 'var(--sp-1)', borderTop: '1px solid var(--c-border)', color: 'var(--c-text-secondary)', fontStyle: 'italic' }}>
+                  {remarques}
+                </div>
+              )}
             </div>
-          </>
-        )}
-        {habFlags.length === 0 && activeParoHabFlags.length === 0 && s.hygieneClin && (
-          <div style={{ marginTop: 'var(--sp-1)' }}><span className="ov-pill ov-pill-green">RAS</span></div>
+          </div>
         )}
       </div>
 
@@ -637,7 +724,6 @@ export default function OverviewTab() {
         <div className="overview-zone-title">Moulage</div>
 
         {/* DDM full width */}
-        <div className="ov-sub-title">DDM (Bilan de Place)</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-small)', tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
@@ -679,7 +765,7 @@ export default function OverviewTab() {
                 <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
                   <td style={{ padding: '2px 4px', fontWeight: 600, color: 'var(--c-text-secondary)', width: '24px' }}>/6</td>
                   <td style={{ padding: '2px 4px', textAlign: 'right' }}>
-                    <span className={hasInc ? (bolton6Excess > 0 ? 'ov-warn ov-warn-bg' : 'ov-ok') : 'ov-empty'} style={{ fontWeight: 600 }}>
+                    <span className={hasInc ? (bolton6Excess > 1.5 ? 'ov-alert ov-alert-bg' : bolton6Excess > 0 ? '' : 'ov-ok') : 'ov-empty'} style={{ fontWeight: 600 }}>
                       {hasInc ? (bolton6Excess > 0 ? `${ratio6 > 0.772 ? 'mand.' : 'max.'} +${bolton6Excess}` : 'OK') : '—'}
                     </span>
                   </td>
@@ -687,7 +773,7 @@ export default function OverviewTab() {
                 <tr>
                   <td style={{ padding: '2px 4px', fontWeight: 600, color: 'var(--c-text-secondary)' }}>/12</td>
                   <td style={{ padding: '2px 4px', textAlign: 'right' }}>
-                    <span className={allTeeth ? (bolton12Excess > 0 ? 'ov-warn ov-warn-bg' : 'ov-ok') : 'ov-empty'} style={{ fontWeight: 600 }}>
+                    <span className={allTeeth ? (bolton12Excess > 1.5 ? 'ov-alert ov-alert-bg' : bolton12Excess > 0 ? '' : 'ov-ok') : 'ov-empty'} style={{ fontWeight: 600 }}>
                       {allTeeth ? (bolton12Excess > 0 ? `${ratio12 > 0.913 ? 'mand.' : 'max.'} +${bolton12Excess}` : 'OK') : '—'}
                     </span>
                   </td>
@@ -763,15 +849,35 @@ export default function OverviewTab() {
             if (withComment.length === 0 && withIssue.length === 0) {
               return <span className="ov-pill ov-pill-green">RAS</span>;
             }
+            const opgInsuranceFlags = [
+              s.hasAnodontie && `Anodontie (206)${s.anodontieDents ? `: ${s.anodontieDents}` : ''}`,
+              s.hasHyperodontie && 'Hyperodontie (207)',
+              s.hasDysplasieDentaire && 'Dysplasie (205)',
+              s.hasRetentionAnkylose && 'Rétention/Ankylose (218)',
+              s.hasAgenesieImportante && `Agénésie (HG)${s.agenesieImportanteDents ? `: ${s.agenesieImportanteDents}` : ''}`,
+              s.hasAnkyloseLait && 'Ankylose lait (HG)',
+              s.hasRetentionDent && 'Rétention (HG)',
+              s.hasRhizalyse && 'Rhizalyse (HG)',
+              s.has17a && 'Dislocation/inclusion (17a)',
+              s.has17c && 'Surnuméraires (17c)',
+              s.has17e && 'Néoformations (17e)',
+            ].filter(Boolean) as string[];
             return (
-              <div className="ov-kv">
-                {withComment.map(o => (
-                  <span key={o.label} style={{ display: 'contents' }}><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">{o.detail}</span></span>
-                ))}
-                {withIssue.map(o => (
-                  <span key={o.label} style={{ display: 'contents' }}><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">—</span></span>
-                ))}
-              </div>
+              <>
+                <div className="ov-kv">
+                  {withComment.map(o => (
+                    <span key={o.label} style={{ display: 'contents' }}><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">{o.detail}</span></span>
+                  ))}
+                  {withIssue.map(o => (
+                    <span key={o.label} style={{ display: 'contents' }}><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">—</span></span>
+                  ))}
+                </div>
+                {opgInsuranceFlags.length > 0 && (
+                  <div className="ov-flags" style={{ marginTop: 'var(--sp-1)' }}>
+                    {opgInsuranceFlags.map(f => <span key={f} className="ov-pill ov-pill-green" style={{ fontSize: 'var(--fs-badge)' }}>{f}</span>)}
+                  </div>
+                )}
+              </>
             );
           })()}
         </div>
@@ -812,25 +918,7 @@ export default function OverviewTab() {
         </div>
       </div>
 
-      {/* ═══ ROW 4: TREATMENT PLAN ═══ */}
-      {(plans.length > 0 || remarques) && (
-        <div className="overview-zone overview-footer" onClick={() => setActiveTab('traitement')} title="→ Plan de Traitement">
-          <div className="overview-zone-title">Plan de Traitement</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: 'var(--fs-small)' }}>
-            {plans.map(p => (
-              <div key={p.num} style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'baseline' }}>
-                <span style={{ fontWeight: 700, color: 'var(--c-primary)', minWidth: '18px', textAlign: 'right' }}>{p.num}.</span>
-                <span>{p.text}</span>
-              </div>
-            ))}
-            {remarques && (
-              <div style={{ marginTop: 'var(--sp-1)', paddingTop: 'var(--sp-1)', borderTop: '1px solid var(--c-border)', color: 'var(--c-text-secondary)', fontStyle: 'italic' }}>
-                {remarques}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Treatment plan moved to col 1 with paro/habitudes */}
     </div>
   );
 }

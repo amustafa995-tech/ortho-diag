@@ -10,6 +10,8 @@ export const initialSession: ClinicalSession = {
   hygieneClin: "", parodonte: "", phenotype: "", hasCaries: false, cariesDent: "", hasFreins: false, freinsDent: "", hasParodontite: false, parodontiteDetails: "",
   hasSuccionPouceClin: false, hasInterpoLabial: false, hasDeglutitionAtypique: false, respiClin: "", hasRincageDents: false, hasAtm: false, succionPouceDetails: "", interpoLabialDetails: "", deglutitionAtypiqueDetails: "", rincageDentsDetails: "", atmDetails: "", anamnGenClin: "", remarqueClin: "", opgRemarque: "",
   overjet: "", classeMolaireD: "", classeMolaireG: "", classeCanineD: "", classeCanineG: "", hasXBiteAnt: false, xbiteAntDent: "", overbite: "", cdsD: "", cdsG: "", hasOcclusalCant: false, hasTraumatisant: false, lm: "", lmDetails: "", hasXSBitePost: false, xsbitePostDent: "",
+  hasBeanceIncisives: false, hasArticuleCiseaux: false, hasBeanceLateroPost: false, beanceLateroPostDent: "",
+  has17b: false,
   t16:'',t15:'',t14:'',t13:'',t12:'',t11:'',t21:'',t22:'',t23:'',t24:'',t25:'',t26:'',
   t46:'',t45:'',t44:'',t43:'',t42:'',t41:'',t31:'',t32:'',t33:'',t34:'',t35:'',t36:'',
   dispSup1513:'',dispSup1211:'',dispSup2122:'',dispSup2325:'',
@@ -17,8 +19,11 @@ export const initialSession: ClinicalSession = {
   distInterMolSup:'',distInterMolInf:'', distPMSup:'',distPMInf:'', distCanSup:'',distCanInf:'', isDroschlActive: false,
   anb: "", spasppMego: "", incisifSpaspp: "", incisifMego: "", appS1: "", appS2: "", appS3: "",
   sna: "", snb: "", wits: "", snSpaspp: "", snMego: "", incisifSn: "", incisifIncisif: "",
-  opgPresenceRas: true, opgPositionRas: true, opgProportionRas: true, opgPathologieRas: true, 
+  opgPresenceRas: true, opgPositionRas: true, opgProportionRas: true, opgPathologieRas: true,
   opgPresence: "", opgPosition: "", opgProportion: "", opgPathologie: "", radioOverview: "",
+  hasAnodontie: false, anodontieDents: "", hasHyperodontie: false, hasAgenesieImportante: false, agenesieImportanteDents: "",
+  hasAnkyloseLait: false, hasRetentionDent: false,
+  hasDysplasieDentaire: false, hasRetentionAnkylose: false, has17a: false, has17c: false, has17e: false, hasRhizalyse: false,
   stadeMaturation: "",
   formeArcadeSup: "",
   formeArcadeInf: "",
@@ -34,12 +39,14 @@ export const initialSession: ClinicalSession = {
 
 const initialPatient: PatientRecord = {
     id: "VDDS-001", nom: "Dupont", prenom: "Jean", pratique: "", sexe: "M", dateNaissance: "", datePremiereConsult: "", age: "",
-    avs: "", compOrtho: "", medecinTraitant: "", medecinDentaire: "", autreInfo: "",
+    avs: "", compOrtho: "", caisseMaladie: "", numGarantie: "", adresse: "", npaLocalite: "", telephone: "", email: "", representantLegal: "",
+    medecinTraitant: "", medecinDentaire: "", autreInfo: "",
     maladiesChroniques: { diabete: false, hypertension: false, allergies: false, cardio: false, respi: false, neuro: false },
     maladiesChroniquesDetails: { diabete: "", hypertension: "", allergies: "", cardio: "", respi: "", neuro: "" },
     hasChirurgies: false, chirurgiesAnterieures: "", hasTraitements: false, traitementsCours: "", allergiesMedic: "", hasAutreGen: false, autreGen: "",
     antecFamExtract: false, extractionDetails: "", carieRecurrente: false, sensibilite: false, hasOrthoPasse: false, traitementsOrthoPasses: "", hasAutreDent: false, autreDent: "", autreAntecDent: "",
     mauvaisesHabitudes: { succionPouce: false, bruxisme: false, rongerOngles: false, respiBuccale: false },
+    hasFente: false, hasMacroglossie: false, hasSAOS: false, hasTroublesDeglutitionGrave: false, hasAsymetrieGrave: false, has17d: false,
     motifConsultation: "Dents en avant", praticien: "Dr. MA", dention: "", implant: "", implantDent: "",
     sessions: [initialSession],
     activeSessionId: "T0"
@@ -147,6 +154,15 @@ export const useStore = create<OrthoDiagState>()(
           ...current.settings.insuranceCriteria,
           ...(persisted?.settings?.insuranceCriteria || {}),
         };
+        // Deep-merge patient so new patient-level fields get defaults
+        merged.patient = { ...current.patient, ...(persisted?.patient || {}) };
+        // Deep-merge each session so new session fields get defaults from initialSession
+        if (persisted?.patient?.sessions) {
+          merged.patient.sessions = persisted.patient.sessions.map((s: any) => ({
+            ...current.patient.sessions[0], // initialSession defaults
+            ...s,
+          }));
+        }
         return merged;
       },
     }

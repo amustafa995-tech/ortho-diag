@@ -675,6 +675,17 @@ input.field-empty {
   width: 68px;
 }
 
+.ov-ceph-axis {
+  width: 16px !important;
+  font-weight: 800 !important;
+  font-size: 0.7rem;
+  color: var(--c-primary) !important;
+  text-align: center !important;
+  vertical-align: middle;
+  border-right: 2px solid var(--c-border);
+  padding: 0 2px !important;
+}
+
 .ov-ceph-table td:nth-child(2) {
   text-align: right;
   font-weight: 700;
@@ -698,6 +709,30 @@ input.field-empty {
   border: none;
   border-top: 1px solid var(--c-border);
   margin: var(--sp-1) 0;
+}
+
+/* ══ INSURANCE DESCRIPTION (inline with checkbox) ══ */
+.ins-desc {
+  font-size: var(--fs-badge);
+  font-style: italic;
+  color: #94a3b8;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* ── Insurance sub-items (indented under OPG toggles) ── */
+.ins-sub-items {
+  padding-left: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.ins-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
 }
 
 /* ══ TAB ACCENT COLORS ══ */

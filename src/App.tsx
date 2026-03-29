@@ -8,6 +8,7 @@ import CephaloTab from './components/tabs/CephaloTab';
 import TraitementTab from './components/tabs/TraitementTab';
 import OverviewTab from './components/tabs/OverviewTab';
 import SettingsTab from './components/tabs/SettingsTab';
+import PriseEnChargeTab from './components/tabs/PriseEnChargeTab';
 import SessionSelector from './components/tabs/SessionSelector';
 import PatientHub from './components/views/PatientHub';
 import { fileSystem } from './services/FileSystemService';
@@ -206,6 +207,14 @@ export default function App() {
 
           <button
             tabIndex={-1}
+            className={`nav-item ${activeTab === 'priseencharge' ? 'active' : ''}`}
+            onClick={() => setActiveTab('priseencharge')}
+            style={{ border: '1px solid var(--c-border)', justifyContent: 'center' }}
+          >
+            Prise en charge
+          </button>
+          <button
+            tabIndex={-1}
             className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
             style={{ border: '1px solid var(--c-border)', justifyContent: 'center' }}
@@ -217,7 +226,7 @@ export default function App() {
 
       <main className="main-content">
         <div className="module-container" style={{ maxWidth: '1100px' }}>
-          {activeTab !== 'settings' && (
+          {activeTab !== 'settings' && activeTab !== 'priseencharge' && (
             <div className="session-bar no-print">
               <SessionSelector />
               {(activeTab === 'moulages' || activeTab === 'cepha') && (
@@ -241,6 +250,7 @@ export default function App() {
           {activeTab === 'moulages' && <MoulageTab />}
           {activeTab === 'cepha' && <CephaloTab />}
           {activeTab === 'traitement' && <TraitementTab />}
+          {activeTab === 'priseencharge' && <PriseEnChargeTab />}
           {activeTab === 'settings' && <SettingsTab />}
         </div>
       </main>

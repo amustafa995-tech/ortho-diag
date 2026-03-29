@@ -77,13 +77,17 @@ export default function ClinicalTab() {
             </div>
             <div className="section-card">
               <h4 className="section-title">Analyse du Sourire</h4>
-              <Select label="Gummy Smile" name="gummySmile" options={["Non", "Oui (Léger)", "Oui (Sévère)"]} ti={130} />
-              <Select label="Symétrie Sourire" name="symetrieSourire" options={["Symétrique", "Asymétrique"]} ti={131} />
-              <Select label="Compétence Labiale" name="competenceLabiale" options={["Compétentes", "Incompétentes", "Ourlets inversés"]} ti={132} />
-              <div className="flex-row" style={{ marginTop: 'var(--sp-1)' }}>
-                <label style={{ margin: 0, fontWeight: 600, fontSize: 'var(--fs-value)' }}>Expo. Incisives</label>
-                <input type="text" inputMode="numeric" name="expoIncisives" value={activeSession.expoIncisives || ''} onChange={(e) => useStore.getState().updateSessionField(activeSessionId, 'expoIncisives', e.target.value)} tabIndex={133} className={`inline-metric-input ${!activeSession.expoIncisives ? 'field-empty' : ''}`} style={{ width: '50px' }} />
-                <span className="text-muted">%</span>
+              <div className="classes-grid">
+                <Select label="Sym. Sourire" name="symetrieSourire" options={["Symétrique", "Asymétrique"]} ti={131} />
+                <Select label="Compét. Labiale" name="competenceLabiale" options={["Compétentes", "Incompétentes", "Ourlets inversés"]} ti={132} />
+              </div>
+              <div className="flex-row" style={{ marginTop: 'var(--sp-1)', gap: 'var(--sp-3)' }}>
+                <Select label="Gummy Smile" name="gummySmile" options={["Non", "Oui (Léger)", "Oui (Sévère)"]} ti={130} />
+                <div className="flex-row">
+                  <label style={{ margin: 0, fontWeight: 600, fontSize: 'var(--fs-value)' }}>Expo. Inc.</label>
+                  <input type="text" inputMode="numeric" name="expoIncisives" value={activeSession.expoIncisives || ''} onChange={(e) => useStore.getState().updateSessionField(activeSessionId, 'expoIncisives', e.target.value)} tabIndex={133} className={`inline-metric-input ${!activeSession.expoIncisives ? 'field-empty' : ''}`} style={{ width: '50px' }} />
+                  <span className="text-muted">%</span>
+                </div>
               </div>
             </div>
           </div>
@@ -104,6 +108,7 @@ export default function ClinicalTab() {
             <div className="flex-row" style={{ marginBottom: 'var(--sp-2)' }}>
               <InlineMetric label="Overjet" name="overjet" ti={200} />
               <ClinicalToggle label="X-bite Ant." stateField="hasXBiteAnt" detailField="xbiteAntDent" ti={201} />
+              <Checkbox label="Béance 3-3 (209a)" name="hasBeanceIncisives" ti={203} />
             </div>
             <div className="classes-grid">
               <Select label="Cl. Can. D." name="classeCanineD" options={["class I", "1/4 class II", "1/2 class II", "3/4 class II", "class II", "1/4 class III", "1/2 class III", "3/4 class III", "class III"]} ti={204} />
@@ -156,6 +161,24 @@ export default function ClinicalTab() {
                   ? <input type="text" name="xsbitePostDent" value={activeSession.xsbitePostDent || ''} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'xsbitePostDent', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
                   : <span />
                 }
+                {/* Insurance detection */}
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0, whiteSpace: 'nowrap' }}>
+                    <input type="checkbox" name="hasArticuleCiseaux" checked={!!activeSession.hasArticuleCiseaux} tabIndex={245} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'hasArticuleCiseaux', e.target.checked)} style={{ margin: 0 }} />
+                    Articulé ciseaux (208)
+                  </label>
+                  <span className="ins-desc">— Anomalie transversale unilatérale</span>
+                </div>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0, whiteSpace: 'nowrap' }}>
+                    <input type="checkbox" name="hasBeanceLateroPost" checked={!!activeSession.hasBeanceLateroPost} tabIndex={246} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'hasBeanceLateroPost', e.target.checked)} style={{ margin: 0 }} />
+                    Béance latéro-post. (HG)
+                  </label>
+                  <span className="ins-desc">— Sur ≥2 paires de dents (hors 8)</span>
+                  {activeSession.hasBeanceLateroPost && (
+                    <input type="text" name="beanceLateroPostDent" value={activeSession.beanceLateroPostDent || ''} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'beanceLateroPostDent', e.target.value)} placeholder="Dents concernées..." className="detail-fade" style={{ width: '150px', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -176,15 +199,23 @@ export default function ClinicalTab() {
           <ParoRow label="Frein Court" stateField="hasFreins" detailField="freinsDent" ti={302} />
           <ParoRow label="Carie" stateField="hasCaries" detailField="cariesDent" ti={304} />
           <ParoRow label="Parodontite" stateField="hasParodontite" detailField="parodontiteDetails" ti={306} />
+          {activeSession.hasParodontite && (
+            <div style={{ paddingLeft: '100px', marginTop: '-1px' }}>
+              <Checkbox label="Parodontite juvénile (LaMal 17b)" name="has17b" ti={308} />
+            </div>
+          )}
+          <ParoRow label="Extractions" stateField="antecFamExtract" detailField="extractionDetails" ti={309} />
         </div>
 
         <div className="card">
-          <div className="card-header"><h3>Habitudes</h3></div>
+          <div className="card-header"><h3>Habitudes & Fonctions</h3></div>
           <div className="flex-col gap-1">
-            <div className="flex-row gap-3 flex-wrap">
-              <Checkbox label="Déglu. atypique" name="hasDeglutitionAtypique" ti={310} />
-              <Checkbox label="Interpo. Labiale" name="hasInterpoLabial" ti={312} />
-              <Checkbox label="Grincage de dents" name="hasRincageDents" ti={314} />
+            <Select label="Respiration" name="respiClin" options={["Nasale", "Buccale", "Mixte"]} ti={310} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px var(--sp-3)', marginTop: 'var(--sp-1)' }}>
+              <Checkbox label="Déglu. atypique" name="hasDeglutitionAtypique" ti={312} />
+              <Checkbox label="Interpo. Labiale" name="hasInterpoLabial" ti={313} />
+              <Checkbox label="Grincement de dents" name="hasRincageDents" ti={314} />
+              <Checkbox label="Succion pouce" name="hasSuccionPouceClin" ti={315} />
             </div>
             <ClinicalToggle label="Désordres ATM" stateField="hasAtm" detailField="atmDetails" ti={316} />
           </div>

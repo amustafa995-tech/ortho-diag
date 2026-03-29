@@ -53,6 +53,9 @@ export interface ClinicalSession {
   hygieneClin: string; parodonte: string; phenotype: string; hasCaries: boolean; cariesDent: string; hasFreins: boolean; freinsDent: string; hasParodontite: boolean; parodontiteDetails: string;
   hasSuccionPouceClin: boolean; hasInterpoLabial: boolean; hasDeglutitionAtypique: boolean; respiClin: string; hasRincageDents: boolean; hasAtm: boolean; succionPouceDetails: string; interpoLabialDetails: string; deglutitionAtypiqueDetails: string; rincageDentsDetails: string; atmDetails: string; anamnGenClin: string; remarqueClin: string; opgRemarque: string;
   overjet: string; classeMolaireD: string; classeMolaireG: string; classeCanineD: string; classeCanineG: string; hasXBiteAnt: boolean; xbiteAntDent: string; overbite: string; cdsD: string; cdsG: string; hasOcclusalCant: boolean; hasTraumatisant: boolean; lm: string; lmDetails: string; hasXSBitePost: boolean; xsbitePostDent: string;
+  // Insurance detection fields - Clinical
+  hasBeanceIncisives: boolean; hasArticuleCiseaux: boolean; hasBeanceLateroPost: boolean; beanceLateroPostDent: string;
+  has17b: boolean;
   
   // Moulages (Dents)
   t16:string; t15:string; t14:string; t13:string; t12:string; t11:string; t21:string; t22:string; t23:string; t24:string; t25:string; t26:string;
@@ -66,8 +69,12 @@ export interface ClinicalSession {
   anb: string; spasppMego: string; incisifSpaspp: string; incisifMego: string; appS1: string; appS2: string; appS3: string;
   sna: string; snb: string; wits: string; snSpaspp: string; snMego: string; incisifSn: string; incisifIncisif: string;
   
-  opgPresenceRas: boolean; opgPositionRas: boolean; opgProportionRas: boolean; opgPathologieRas: boolean; 
+  opgPresenceRas: boolean; opgPositionRas: boolean; opgProportionRas: boolean; opgPathologieRas: boolean;
   opgPresence: string; opgPosition: string; opgProportion: string; opgPathologie: string; radioOverview: string;
+  // Insurance detection fields - OPG
+  hasAnodontie: boolean; anodontieDents: string; hasHyperodontie: boolean; hasAgenesieImportante: boolean; agenesieImportanteDents: string;
+  hasAnkyloseLait: boolean; hasRetentionDent: boolean;
+  hasDysplasieDentaire: boolean; hasRetentionAnkylose: boolean; has17a: boolean; has17c: boolean; has17e: boolean; hasRhizalyse: boolean;
   
   stadeMaturation: string;
   formeArcadeSup: string;
@@ -97,6 +104,13 @@ export interface PatientRecord {
   age: string;
   avs: string;
   compOrtho: string;
+  caisseMaladie: string;
+  numGarantie: string;
+  adresse: string;
+  npaLocalite: string;
+  telephone: string;
+  email: string;
+  representantLegal: string;
   medecinTraitant: string;
   medecinDentaire: string;
   autreInfo: string;
@@ -128,6 +142,9 @@ export interface PatientRecord {
   autreDent: string;
   autreAntecDent: string;
   mauvaisesHabitudes: MauvaisesHabitudes;
+
+  // Insurance detection fields - Medical (patient-level)
+  hasFente: boolean; hasMacroglossie: boolean; hasSAOS: boolean; hasTroublesDeglutitionGrave: boolean; hasAsymetrieGrave: boolean; has17d: boolean;
 
   // Sessions
   sessions: ClinicalSession[];
