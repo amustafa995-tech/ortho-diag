@@ -1,29 +1,19 @@
 import { useStore } from '../../store/useStore';
-import type { InsuranceCriteria } from '../../types';
+import type { InsuranceCriteria, PatientRecord, ClinicalSession } from '../../types';
+import { calculateAge, calculateAgeYears } from '../../utils/age';
 
 // ── Insurance analysis ──
 type InsuranceResult = { code: string; label: string; status: 'eligible' | 'possible' | 'missing' | 'none'; detail: string; missing?: string[] };
 
-function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { ai: InsuranceResult[]; lamal: InsuranceResult[]; hg: InsuranceResult[]; complementaire: InsuranceResult[] } {
+function analyzeInsurance(patient: PatientRecord, s: ClinicalSession, criteria: InsuranceCriteria): { ai: InsuranceResult[]; lamal: InsuranceResult[]; hg: InsuranceResult[]; complementaire: InsuranceResult[] } {
   const p = (field: string) => { const v = parseFloat(((s as any)[field] || '').toString().replace(',', '.')); return isNaN(v) ? null : v; };
   const anb = p('anb');
   const snMego = p('snMego');
   const oj = p('overjet');
-  const ob = p('overbite');
-
   // Age computation
-  let ageYears: number | null = null;
-  if (patient.dateNaissance) {
-    const from = new Date(patient.dateNaissance);
-    const to = patient.datePremiereConsult ? new Date(patient.datePremiereConsult) : new Date();
-    if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
-      ageYears = (to.getTime() - from.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
-    }
-  }
+  const ageYears = calculateAgeYears(patient.dateNaissance, patient.datePremiereConsult);
 
   // DDM totals for encombrement
-  const ddmSup = ['dispSup1513','dispSup1211','dispSup2122','dispSup2325'].reduce((a, k) => { const v = p(k); return v !== null ? a + v : a; }, 0);
-  const ddmInf = ['dispInf4543','dispInf4241','dispInf3132','dispInf3335'].reduce((a, k) => { const v = p(k); return v !== null ? a + v : a; }, 0);
   const necSup = [['t15','t14','t13'],['t12','t11'],['t21','t22'],['t23','t24','t25']].map(ks => ks.reduce((a,k) => a + (p(k) || 0), 0));
   const necInf = [['t45','t44','t43'],['t42','t41'],['t31','t32'],['t33','t34','t35']].map(ks => ks.reduce((a,k) => a + (p(k) || 0), 0));
   const dSKeys = ['dispSup1513','dispSup1211','dispSup2122','dispSup2325'];
@@ -112,40 +102,26 @@ function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { 
     ai.push({ code: '218', label: 'Rétention/Ankylose', status: under20 ? 'eligible' : 'none', detail: 'Rétention/Ankylose déclarée (OPG)' });
   }
 
-  if (!under20 && ageYears !== null) {
-    ai.forEach(r => { if (r.status === 'none') r.detail += ' (> 20 ans)'; });
-  }
-
   // ═══ LaMal ═══
   const lamal: InsuranceResult[] = [];
 
-  // Art. 17a - Dislocations / inclusions pathologiques (kyste, résorption, refoulement)
+  // Art. 17a-17f: LaMal-specific items (NOT covered by AI codes)
   if (s.has17a) lamal.push({ code: '17a', label: 'Dislocation / inclusion path.', status: 'eligible', detail: 'Dent incluse avec pathologie associée (kyste, résorption, refoulement)' });
-
-  // Art. 17b - Parodontite juvénile
   if (s.has17b) lamal.push({ code: '17b', label: 'Parodontite juvénile', status: 'eligible', detail: 'Parodontite juvénile déclarée (clinique)' });
-
-  // Art. 17c - Dents surnuméraires pathologiques
   if (s.has17c) lamal.push({ code: '17c', label: 'Dents surnuméraires path.', status: 'eligible', detail: 'Dents surnuméraires pathologiques (OPG)' });
-
-  // Art. 17d - Dysgnathie fonctionnelle (ATM)
   if (patient.has17d) lamal.push({ code: '17d', label: 'Dysgnathie (ATM)', status: 'eligible', detail: 'Dysgnathie fonctionnelle déclarée (ATM)' });
   else if (s.hasAtm) lamal.push({ code: '17d', label: 'Dysgnathie (ATM)?', status: 'possible', detail: 'Désordres ATM déclarés — confirmer 17d' });
-
-  // Art. 17e - Néoformations
   if (s.has17e) lamal.push({ code: '17e', label: 'Néoformations', status: 'eligible', detail: 'Néoformations déclarées (OPG)' });
-
-  // Art. 17f - Troubles fonctionnels graves
   if (patient.hasSAOS) lamal.push({ code: '17f', label: 'SAOS (Apnée)', status: 'eligible', detail: 'Syndrome apnée du sommeil (anamnèse)' });
   if (patient.hasTroublesDeglutitionGrave) lamal.push({ code: '17f', label: 'Troubles déglutition', status: 'eligible', detail: 'Troubles déglutition grave (anamnèse)' });
   if (patient.hasAsymetrieGrave) lamal.push({ code: '17f', label: 'Asymétrie faciale grave', status: 'eligible', detail: 'Asymétrie faciale grave (anamnèse)' });
 
-  // Art. 19a - AI after 20 years (LaMal relay)
+  // Art. 19a - AI relay after 20 years: show AI codes as LaMal instead
+  // Under 20: AI items are shown directly, no duplication in LaMal
+  // Over 20: AI items become LaMal art.19a (AI items will be filtered out in display)
   if (ageYears !== null && ageYears >= 20) {
     ai.forEach(r => {
-      if (r.status === 'none' || r.status === 'missing') {
-        lamal.push({ ...r, label: `${r.label} (art.19a)`, status: r.status === 'none' ? 'possible' : 'missing', detail: r.detail.replace(' (> 20 ans)', '') + ' — après 20 ans' });
-      }
+      lamal.push({ ...r, label: `${r.label} (art.19a)`, status: r.status === 'eligible' ? 'possible' : r.status, detail: r.detail + ' — relais LaMal après 20 ans' });
     });
   }
 
@@ -311,17 +287,7 @@ export default function OverviewTab() {
   if (!s) return <div className="text-muted text-center">Aucune session</div>;
 
   // Age computation
-  let age = '';
-  if (patient.dateNaissance) {
-    const from = new Date(patient.dateNaissance);
-    const to = patient.datePremiereConsult ? new Date(patient.datePremiereConsult) : new Date();
-    if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
-      let m = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
-      if (to.getDate() < from.getDate()) m--;
-      const y = Math.floor(m / 12);
-      age = y > 0 ? `${y}a ${m % 12}m` : `${m % 12}m`;
-    }
-  }
+  const age = calculateAge(patient.dateNaissance, patient.datePremiereConsult)?.display || '';
 
   // Bolton
   const maxKeys = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26'];
@@ -353,20 +319,27 @@ export default function OverviewTab() {
   const distCanDelta = n(s,'distCanSup') > 0 && n(s,'distCanInf') > 0 ? Math.round((n(s,'distCanSup') - n(s,'distCanInf'))*10)/10 : null;
 
   // Ceph rendering helper
-  const CephRow = ({ field }: { field: string }) => {
+  const CephRow = ({ field, axis }: { field: string; axis?: { label: string; span: number } }) => {
     const norm = CEPH_NORMS[field];
     const val = (s as any)[field];
     const valNum = parseFloat((val || '').replace(',', '.'));
     const filled = val && !isNaN(valNum);
     const isError = filled && (valNum < norm.ideal - norm.dev || valNum > norm.ideal + norm.dev);
+    const errorBg = isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined;
     return (
-      <tr>
-        <td>{norm.label}</td>
-        <td className={isError ? 'ov-alert' : (filled ? '' : 'ov-empty')} style={isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined}>
-          {filled ? valNum : '—'}
-        </td>
-        <td>{norm.ideal}±{norm.dev}</td>
-      </tr>
+      <>
+        {axis && axis.label !== 'S' && (
+          <tr><td colSpan={4} style={{ padding: 0, height: '1px' }}><div style={{ borderTop: '1px solid var(--c-border)', margin: '3px 0' }} /></td></tr>
+        )}
+        <tr>
+          {axis && <td rowSpan={axis.span} className="ov-ceph-axis">{axis.label}</td>}
+          <td className={`ceph-label ${isError ? 'ov-alert' : ''}`} style={errorBg}>{norm.label}</td>
+          <td className={`ceph-val ${isError ? 'ov-alert' : (filled ? '' : 'ov-empty')}`} style={errorBg}>
+            {filled ? valNum : '—'}
+          </td>
+          <td className="ceph-norm">{norm.ideal}±{norm.dev}</td>
+        </tr>
+      </>
     );
   };
 
@@ -384,20 +357,6 @@ export default function OverviewTab() {
     if (!filled) return <span className="ov-empty">—</span>;
     const isWarn = (warnLow !== undefined && num < warnLow) || (warnHigh !== undefined && num > warnHigh);
     return <span className={isWarn ? 'ov-alert ov-alert-bg' : ''}>{num} {unit}</span>;
-  };
-
-  // OPG row
-  const OpgRow = ({ label, rasField, detailField }: { label: string; rasField: string; detailField: string }) => {
-    const isRas = !!(s as any)[rasField];
-    const detail = (s as any)[detailField] || '';
-    return (
-      <>
-        <span className="ov-label">{label}</span>
-        <span className={`ov-val ${isRas ? 'ov-ok' : (detail ? 'ov-warn ov-warn-bg' : 'ov-empty')}`}>
-          {isRas ? 'RAS' : (detail || '—')}
-        </span>
-      </>
-    );
   };
 
   // Intra-oral flags
@@ -459,9 +418,14 @@ export default function OverviewTab() {
 
   // Insurance analysis
   const insurance = criteria ? analyzeInsurance(patient, s, criteria) : { ai: [], lamal: [], hg: [], complementaire: [] };
-  const allInsurance = [...insurance.ai, ...insurance.lamal, ...insurance.hg];
+  // Under 20: show AI items, hide LaMal art.19a duplicates (only show LaMal-specific 17a-17f)
+  // Over 20: hide AI items (they're relayed to LaMal art.19a)
+  const ageForInsurance = calculateAgeYears(patient.dateNaissance, patient.datePremiereConsult);
+  const isOver20 = ageForInsurance !== null && ageForInsurance >= 20;
+  const displayAi = isOver20 ? [] : insurance.ai;
+  const displayLamal = insurance.lamal;
+  const allInsurance = [...displayAi, ...displayLamal, ...insurance.hg];
   const hasEligible = allInsurance.some(r => r.status === 'eligible');
-  const hasPossible = allInsurance.some(r => r.status === 'possible');
   const hasMissing = allInsurance.some(r => r.status === 'missing');
 
   // Treatment plans
@@ -507,14 +471,14 @@ export default function OverviewTab() {
       {allInsurance.length > 0 && (
         <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 'var(--sp-2)', padding: 'var(--sp-2) var(--sp-3)', background: hasEligible ? '#f0fdf4' : hasMissing ? '#fffbeb' : '#f8fafc', border: `1px solid ${hasEligible ? '#bbf7d0' : hasMissing ? '#fde68a' : 'var(--c-border)'}`, borderRadius: 'var(--radius-lg)', flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontWeight: 700, fontSize: 'var(--fs-small)', color: 'var(--c-text-secondary)', marginRight: 'var(--sp-1)' }}>Prise en charge :</span>
-          {insurance.ai.map((r, i) => (
+          {displayAi.map((r, i) => (
             <span key={`ai-${i}`} title={r.detail + (r.missing ? ' — Manquant: ' + r.missing.join(', ') : '')}
               className={`ov-pill ${r.status === 'eligible' ? 'ov-pill-green' : r.status === 'missing' ? 'ov-pill-amber' : 'ov-pill-muted'}`}
               style={{ fontSize: 'var(--fs-badge)' }}>
               AI {r.code} — {r.label} {r.status === 'missing' && '⚠'}
             </span>
           ))}
-          {insurance.lamal.map((r, i) => (
+          {displayLamal.map((r, i) => (
             <span key={`lamal-${i}`} title={r.detail}
               className={`ov-pill ${r.status === 'eligible' ? 'ov-pill-green' : r.status === 'possible' ? 'ov-pill-blue' : r.status === 'missing' ? 'ov-pill-amber' : 'ov-pill-muted'}`}
               style={{ fontSize: 'var(--fs-badge)' }}>
@@ -556,7 +520,13 @@ export default function OverviewTab() {
           <KV label="Gummy" field="gummySmile" val={s.gummySmile} noGreen />
           <KV label="Sym. Sourire" field="symetrieSourire" val={s.symetrieSourire} noGreen />
           <KV label="Compét. Lab." field="competenceLabiale" val={s.competenceLabiale} noGreen />
-          <KV label="Expo. Inc." val={s.expoIncisives} suffix="%" />
+          <span className="ov-label">Expo. Inc.</span>
+          {(() => {
+            const v = parseFloat((s.expoIncisives || '').replace(',', '.'));
+            const filled = s.expoIncisives && !isNaN(v);
+            const isLow = filled && v < 80;
+            return <span className={`ov-val ${isLow ? 'ov-alert ov-alert-bg' : filled ? '' : 'ov-empty'}`}>{filled ? `${v}%` : '—'}</span>;
+          })()}
         </div>
       </div>
 
@@ -660,12 +630,17 @@ export default function OverviewTab() {
 
         <table className="ov-ceph-table" style={{ marginTop: 'var(--sp-1)' }}>
           <tbody>
-            <tr><td rowSpan={4} className="ov-ceph-axis">S</td>{(() => { const norm = CEPH_NORMS['sna']; const val = (s as any)['sna']; const valNum = parseFloat((val || '').replace(',', '.')); const filled = val && !isNaN(valNum); const isError = filled && (valNum < norm.ideal - norm.dev || valNum > norm.ideal + norm.dev); return <><td>{norm.label}</td><td className={isError ? 'ov-alert' : (filled ? '' : 'ov-empty')} style={isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined}>{filled ? valNum : '—'}</td><td>{norm.ideal}±{norm.dev}</td></>; })()}</tr>
-            {['snb','anb','wits'].map(f => <CephRow key={f} field={f} />)}
-            <tr><td rowSpan={3} className="ov-ceph-axis">V</td>{(() => { const norm = CEPH_NORMS['snSpaspp']; const val = (s as any)['snSpaspp']; const valNum = parseFloat((val || '').replace(',', '.')); const filled = val && !isNaN(valNum); const isError = filled && (valNum < norm.ideal - norm.dev || valNum > norm.ideal + norm.dev); return <><td>{norm.label}</td><td className={isError ? 'ov-alert' : (filled ? '' : 'ov-empty')} style={isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined}>{filled ? valNum : '—'}</td><td>{norm.ideal}±{norm.dev}</td></>; })()}</tr>
-            {['spasppMego','snMego'].map(f => <CephRow key={f} field={f} />)}
-            <tr><td rowSpan={4} className="ov-ceph-axis">D</td>{(() => { const norm = CEPH_NORMS['incisifSn']; const val = (s as any)['incisifSn']; const valNum = parseFloat((val || '').replace(',', '.')); const filled = val && !isNaN(valNum); const isError = filled && (valNum < norm.ideal - norm.dev || valNum > norm.ideal + norm.dev); return <><td>{norm.label}</td><td className={isError ? 'ov-alert' : (filled ? '' : 'ov-empty')} style={isError ? { background: 'var(--c-alert-bg)', borderRadius: '2px' } : undefined}>{filled ? valNum : '—'}</td><td>{norm.ideal}±{norm.dev}</td></>; })()}</tr>
-            {['incisifSpaspp','incisifMego','incisifIncisif'].map(f => <CephRow key={f} field={f} />)}
+            <CephRow field="sna" axis={{ label: 'S', span: 4 }} />
+            <CephRow field="snb" />
+            <CephRow field="anb" />
+            <CephRow field="wits" />
+            <CephRow field="snSpaspp" axis={{ label: 'V', span: 3 }} />
+            <CephRow field="spasppMego" />
+            <CephRow field="snMego" />
+            <CephRow field="incisifSn" axis={{ label: 'D', span: 4 }} />
+            <CephRow field="incisifSpaspp" />
+            <CephRow field="incisifMego" />
+            <CephRow field="incisifIncisif" />
           </tbody>
         </table>
       </div>

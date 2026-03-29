@@ -5,6 +5,7 @@ import { Input, Select, Checkbox, ConditionToggle } from '../ui/Forms';
 export default function InfoTab() {
   const patient = useStore(state => state.patient);
   const settings = useStore(state => state.settings);
+  const updatePatientField = useStore(state => state.updatePatientField);
 
   let ageCalcule = "";
   if (patient.dateNaissance) {
@@ -93,9 +94,9 @@ export default function InfoTab() {
                 <Checkbox label="Traitements actuels" name="hasTraitements" />
                 <Checkbox label="Autre" name="hasAutreGen" />
               </div>
-              {patient.hasChirurgies && <input type="text" name="chirurgiesAnterieures" value={patient.chirurgiesAnterieures || ''} onChange={e => useStore.getState().updatePatientField('chirurgiesAnterieures', e.target.value)} placeholder="Chirurgies : amygdalectomie..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
-              {patient.hasTraitements && <input type="text" name="traitementsCours" value={patient.traitementsCours || ''} onChange={e => useStore.getState().updatePatientField('traitementsCours', e.target.value)} placeholder="Traitements : anticoagulants..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
-              {patient.hasAutreGen && <input type="text" name="autreGen" value={patient.autreGen || ''} onChange={e => useStore.getState().updatePatientField('autreGen', e.target.value)} placeholder="Autre médical..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
+              {patient.hasChirurgies && <input type="text" name="chirurgiesAnterieures" value={patient.chirurgiesAnterieures || ''} onChange={e => updatePatientField('chirurgiesAnterieures', e.target.value)} placeholder="Chirurgies : amygdalectomie..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
+              {patient.hasTraitements && <input type="text" name="traitementsCours" value={patient.traitementsCours || ''} onChange={e => updatePatientField('traitementsCours', e.target.value)} placeholder="Traitements : anticoagulants..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
+              {patient.hasAutreGen && <input type="text" name="autreGen" value={patient.autreGen || ''} onChange={e => updatePatientField('autreGen', e.target.value)} placeholder="Autre médical..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
             </div>
           </div>
 
@@ -108,9 +109,9 @@ export default function InfoTab() {
             </div>
             <div style={{ marginTop: 'var(--sp-2)', borderTop: '1px solid var(--c-border)', paddingTop: 'var(--sp-1)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <Checkbox label="Historique Orthodontique" name="hasOrthoPasse" />
-              {patient.hasOrthoPasse && <input type="text" name="traitementsOrthoPasses" value={patient.traitementsOrthoPasses || ''} onChange={e => useStore.getState().updatePatientField('traitementsOrthoPasses', e.target.value)} placeholder="Ex: bague 2 ans, appareil amovible..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
+              {patient.hasOrthoPasse && <input type="text" name="traitementsOrthoPasses" value={patient.traitementsOrthoPasses || ''} onChange={e => updatePatientField('traitementsOrthoPasses', e.target.value)} placeholder="Ex: bague 2 ans, appareil amovible..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
               <Checkbox label="Autre (Dentaire)" name="hasAutreDent" />
-              {patient.hasAutreDent && <input type="text" name="autreDent" value={patient.autreDent || ''} onChange={e => useStore.getState().updatePatientField('autreDent', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
+              {patient.hasAutreDent && <input type="text" name="autreDent" value={patient.autreDent || ''} onChange={e => updatePatientField('autreDent', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ width: '100%', padding: '3px 8px', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />}
             </div>
           </div>
         </div>

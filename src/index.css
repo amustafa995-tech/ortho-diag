@@ -661,42 +661,42 @@ input.field-empty {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--fs-small);
-  table-layout: fixed;
 }
 
 .ov-ceph-table td {
   padding: 1px var(--sp-1);
 }
 
-.ov-ceph-table td:first-child {
+.ov-ceph-axis {
+  width: 16px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  color: var(--c-primary);
+  text-align: center;
+  vertical-align: middle;
+  border-right: 2px solid var(--c-border);
+  padding: 0 2px;
+}
+
+.ov-ceph-table .ceph-label {
   font-weight: 500;
   color: var(--c-text-secondary);
   white-space: nowrap;
-  width: 68px;
+  width: 80px;
 }
 
-.ov-ceph-axis {
-  width: 16px !important;
-  font-weight: 800 !important;
-  font-size: 0.7rem;
-  color: var(--c-primary) !important;
-  text-align: center !important;
-  vertical-align: middle;
-  border-right: 2px solid var(--c-border);
-  padding: 0 2px !important;
-}
-
-.ov-ceph-table td:nth-child(2) {
+.ov-ceph-table .ceph-val {
   text-align: right;
-  font-weight: 700;
-  width: 48px;
-  padding-right: var(--sp-3);
+  font-weight: 600;
+  width: 40px;
+  padding-right: var(--sp-2);
 }
 
-.ov-ceph-table td:nth-child(3) {
+.ov-ceph-table .ceph-norm {
   text-align: right;
   color: var(--c-text-muted);
   font-size: var(--fs-badge);
+  width: 50px;
 }
 
 .ov-flags {
@@ -787,6 +787,124 @@ input.field-empty {
   .intra-oral-grid .v-divider {
     display: none;
   }
+}
+
+/* ══ TABLET ══ */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-shrink: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--c-border);
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: var(--sp-1) var(--sp-2);
+    gap: var(--sp-1);
+  }
+
+  .nav-item {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    padding: var(--sp-1) var(--sp-2);
+    font-size: var(--fs-small);
+  }
+
+  .nav-label { display: none; }
+  .nav-shortcut { display: none; }
+
+  .nav-badge {
+    font-size: var(--fs-badge);
+  }
+
+  .main-content {
+    padding: var(--sp-2);
+    overflow-y: visible;
+  }
+
+  .module-container {
+    max-width: none !important;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .espace-dispo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .session-bar {
+    flex-direction: column;
+    gap: var(--sp-2);
+    align-items: stretch;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+  }
+
+  .sidebar-brand { margin: 0; }
+
+  .sidebar-patient-card {
+    margin: var(--sp-1) var(--sp-2);
+  }
+
+  .save-indicator {
+    padding: var(--sp-1) var(--sp-2);
+  }
+}
+
+/* ══ ACCESSIBILITY ══ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: var(--c-focus);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Skip navigation link (screen readers) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ══ PRINT ══ */

@@ -1,4 +1,5 @@
 import type { PatientRecord } from '../types';
+import { validatePatientData, migratePatientData } from '../schemas/patient';
 
 declare global {
   interface Window {
@@ -13,9 +14,29 @@ export interface PatientDirectory {
   lastModified: number;
 }
 
+const MAX_CACHE_SIZE = 200;
+
 export class FileSystemService {
   private rootHandle: FileSystemDirectoryHandle | null = null;
   private urlCache = new Map<string, string>();
+  private reverseUrlCache = new Map<string, string>(); // url → key
+  private saveMutex: Promise<void> = Promise.resolve();
+
+  private assertRoot(): FileSystemDirectoryHandle {
+    if (!this.rootHandle) throw new Error("Root handle manquant. Veuillez reconnecter le dossier.");
+    return this.rootHandle;
+  }
+
+  /**
+   * Sanitize a folder name to prevent path traversal and invalid characters.
+   */
+  static sanitizeFolderName(name: string): string {
+    return name
+      .replace(/\.\./g, '')
+      .replace(/[\/\\:*?"<>|]/g, '')
+      .replace(/^\.+/, '')
+      .trim();
+  }
 
   async requestRootAccess(): Promise<boolean> {
     try {
@@ -35,17 +56,23 @@ export class FileSystemService {
   }
 
   async loadPatientsList(): Promise<PatientDirectory[]> {
-    if (!this.rootHandle) throw new Error("Root handle manquant");
-
+    const root = this.assertRoot();
     const patients: PatientDirectory[] = [];
 
-    for await (const entry of (this.rootHandle as any).values()) {
+    for await (const entry of (root as any).values()) {
       if (entry.kind === 'directory') {
+        let lastModified = Date.now();
+        try {
+          const fileHandle = await entry.getFileHandle('data.json');
+          const file = await fileHandle.getFile();
+          lastModified = file.lastModified;
+        } catch { /* no data.json yet */ }
+
         patients.push({
           handle: entry,
           folderName: entry.name,
           patientName: entry.name.replace(/_/g, ' '),
-          lastModified: Date.now()
+          lastModified,
         });
       }
     }
@@ -53,31 +80,134 @@ export class FileSystemService {
   }
 
   async createPatientDirectory(folderName: string): Promise<FileSystemDirectoryHandle> {
-    if (!this.rootHandle) throw new Error("Root handle manquant");
-    return await this.rootHandle.getDirectoryHandle(folderName, { create: true });
+    const root = this.assertRoot();
+    const safeName = FileSystemService.sanitizeFolderName(folderName);
+    if (!safeName) {
+      throw new Error("Nom de dossier invalide après assainissement.");
+    }
+    return await root.getDirectoryHandle(safeName, { create: true });
   }
 
   async deletePatientDirectory(folderName: string): Promise<void> {
-    if (!this.rootHandle) throw new Error("Root handle manquant");
-    await (this.rootHandle as any).removeEntry(folderName, { recursive: true });
+    const root = this.assertRoot();
+    const safeName = FileSystemService.sanitizeFolderName(folderName);
+    if (!safeName) {
+      throw new Error("Nom de dossier invalide après assainissement.");
+    }
+    await (root as any).removeEntry(safeName, { recursive: true });
   }
+
+  // ── Atomic save: write to .tmp then rename ──
 
   async savePatientData(dirHandle: FileSystemDirectoryHandle, data: PatientRecord): Promise<void> {
-    const fileHandle = await dirHandle.getFileHandle('data.json', { create: true });
-    const writable = await (fileHandle as any).createWritable();
-    await writable.write(JSON.stringify(data, null, 2));
-    await writable.close();
+    // Chain onto the mutex so concurrent saves are serialized
+    const previousSave = this.saveMutex;
+    let resolve!: () => void;
+    this.saveMutex = new Promise<void>((r) => { resolve = r; });
+
+    try {
+      await previousSave;
+      await this._savePatientDataImpl(dirHandle, data);
+    } finally {
+      resolve();
+    }
   }
 
-  async loadPatientData(dirHandle: FileSystemDirectoryHandle): Promise<PatientRecord | null> {
+  private async _savePatientDataImpl(dirHandle: FileSystemDirectoryHandle, data: PatientRecord): Promise<void> {
+    const serialized = JSON.stringify(data, null, 2);
+
+    // 1. Create backup of current data.json → data.json.bak
+    try {
+      const existingHandle = await dirHandle.getFileHandle('data.json');
+      const existingFile = await existingHandle.getFile();
+      const backupHandle = await dirHandle.getFileHandle('data.json.bak', { create: true });
+      const backupWritable = await (backupHandle as any).createWritable();
+      await backupWritable.write(existingFile);
+      await backupWritable.close();
+    } catch { /* no existing file to backup — first save */ }
+
+    // 2. Write to tmp file first
+    const tmpHandle = await dirHandle.getFileHandle('data.json.tmp', { create: true });
+    const tmpWritable = await (tmpHandle as any).createWritable();
+    await tmpWritable.write(serialized);
+    await tmpWritable.close();
+
+    // 3. Read back tmp to verify integrity
+    const verifyFile = await tmpHandle.getFile();
+    const verifyText = await verifyFile.text();
+    try {
+      JSON.parse(verifyText);
+    } catch {
+      throw new Error("Erreur d'intégrité : le fichier temporaire est corrompu. Sauvegarde annulée.");
+    }
+
+    // 4. Overwrite data.json with the verified tmp content (not re-serialized)
+    const fileHandle = await dirHandle.getFileHandle('data.json', { create: true });
+    const writable = await (fileHandle as any).createWritable();
+    await writable.write(verifyText);
+    await writable.close();
+
+    // 5. Clean up tmp
+    try {
+      await (dirHandle as any).removeEntry('data.json.tmp');
+    } catch { /* non-critical */ }
+  }
+
+  async loadPatientData(dirHandle: FileSystemDirectoryHandle): Promise<{ data: PatientRecord | null; error?: string }> {
+    // Try main file first
     try {
       const fileHandle = await dirHandle.getFileHandle('data.json');
       const file = await fileHandle.getFile();
       const text = await file.text();
-      return JSON.parse(text) as PatientRecord;
+      if (!text.trim()) {
+        return { data: null, error: "Le fichier data.json est vide." };
+      }
+      try {
+        const parsed = JSON.parse(text);
+        return this.validateAndMigrate(parsed);
+      } catch {
+        // JSON corrupted — try backup
+        console.error("data.json corrompu, tentative de restauration depuis backup...");
+        return await this.loadFromBackup(dirHandle);
+      }
     } catch {
-      console.warn("Pas de fichier data.json trouvé dans ce dossier.");
-      return null;
+      // data.json not found — try backup
+      return await this.loadFromBackup(dirHandle);
+    }
+  }
+
+  private validateAndMigrate(raw: unknown): { data: PatientRecord | null; error?: string } {
+    if (!raw || typeof raw !== 'object') {
+      return { data: null, error: "Le fichier ne contient pas un objet valide." };
+    }
+
+    // 1. Apply schema migrations
+    const migrated = migratePatientData(raw as Record<string, any>);
+
+    // 2. Validate with Zod
+    const result = validatePatientData(migrated);
+    if (!result.success) {
+      return { data: null, error: result.error };
+    }
+
+    return { data: result.data as unknown as PatientRecord };
+  }
+
+  private async loadFromBackup(dirHandle: FileSystemDirectoryHandle): Promise<{ data: PatientRecord | null; error?: string }> {
+    try {
+      const bakHandle = await dirHandle.getFileHandle('data.json.bak');
+      const bakFile = await bakHandle.getFile();
+      const bakText = await bakFile.text();
+      const parsed = JSON.parse(bakText);
+      const result = this.validateAndMigrate(parsed);
+      if (result.data) {
+        // Restore backup as main file
+        await this.savePatientData(dirHandle, result.data);
+        return { data: result.data, error: "Restauré depuis la sauvegarde de secours (data.json.bak)." };
+      }
+      return { data: null, error: result.error || "Le backup est invalide." };
+    } catch {
+      return { data: null, error: "Aucun fichier data.json ou backup trouvé dans ce dossier." };
     }
   }
 
@@ -90,16 +220,36 @@ export class FileSystemService {
     return fileName;
   }
 
+  // ── LRU URL Cache ──
+
+  private addToCache(key: string, url: string): void {
+    // Evict oldest if at capacity
+    if (this.urlCache.size >= MAX_CACHE_SIZE) {
+      const oldestKey = this.urlCache.keys().next().value!;
+      const oldestUrl = this.urlCache.get(oldestKey)!;
+      URL.revokeObjectURL(oldestUrl);
+      this.urlCache.delete(oldestKey);
+      this.reverseUrlCache.delete(oldestUrl);
+    }
+    this.urlCache.set(key, url);
+    this.reverseUrlCache.set(url, key);
+  }
+
   async getMediaUrl(dirHandle: FileSystemDirectoryHandle, fileName: string): Promise<string | null> {
     const cacheKey = `${(dirHandle as any).name}/${fileName}`;
     const cached = this.urlCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      // Move to end (most recently used)
+      this.urlCache.delete(cacheKey);
+      this.urlCache.set(cacheKey, cached);
+      return cached;
+    }
 
     try {
       const fileHandle = await dirHandle.getFileHandle(fileName);
       const file = await fileHandle.getFile();
       const url = URL.createObjectURL(file);
-      this.urlCache.set(cacheKey, url);
+      this.addToCache(cacheKey, url);
       return url;
     } catch (err) {
       console.error(`Impossible de lire le fichier ${fileName}`, err);
@@ -110,17 +260,25 @@ export class FileSystemService {
   revokeMediaUrl(url: string) {
     if (url.startsWith('blob:')) {
       URL.revokeObjectURL(url);
-      for (const [key, val] of this.urlCache) {
-        if (val === url) { this.urlCache.delete(key); break; }
+      const key = this.reverseUrlCache.get(url);
+      if (key) {
+        this.urlCache.delete(key);
+        this.reverseUrlCache.delete(url);
       }
     }
   }
 
+  /**
+   * Revoke all cached blob URLs. Call this on patient switch to prevent memory leaks.
+   */
   revokeAllUrls() {
-    for (const url of this.urlCache.values()) {
+    // Snapshot values to avoid mutation during iteration
+    const urls = [...this.urlCache.values()];
+    for (const url of urls) {
       URL.revokeObjectURL(url);
     }
     this.urlCache.clear();
+    this.reverseUrlCache.clear();
   }
 
   // ── Document Management ──
@@ -144,23 +302,30 @@ export class FileSystemService {
   }
 
   async deleteDocument(dirHandle: FileSystemDirectoryHandle, category: string, fileName: string): Promise<void> {
-    try {
-      const catDir = await this.ensureCategoryDir(dirHandle, category);
-      await (catDir as any).removeEntry(fileName);
-    } catch (err) {
-      console.error(`Impossible de supprimer ${category}/${fileName}`, err);
-    }
+    const catDir = await this.ensureCategoryDir(dirHandle, category);
+    await (catDir as any).removeEntry(fileName);
   }
 
   async renameDocument(dirHandle: FileSystemDirectoryHandle, category: string, oldName: string, newName: string): Promise<boolean> {
     try {
       const catDir = await this.ensureCategoryDir(dirHandle, category);
+      // Read old file
       const oldHandle = await catDir.getFileHandle(oldName);
       const file = await oldHandle.getFile();
+      // Write new file
       const newHandle = await catDir.getFileHandle(newName, { create: true });
       const writable = await (newHandle as any).createWritable();
       await writable.write(file);
       await writable.close();
+      // Verify new file before deleting old
+      const verifyHandle = await catDir.getFileHandle(newName);
+      const verifyFile = await verifyHandle.getFile();
+      if (verifyFile.size !== file.size) {
+        // Cleanup failed rename
+        await (catDir as any).removeEntry(newName);
+        return false;
+      }
+      // Delete old only after verification
       await (catDir as any).removeEntry(oldName);
       return true;
     } catch (err) {
@@ -172,14 +337,18 @@ export class FileSystemService {
   async getDocumentUrl(dirHandle: FileSystemDirectoryHandle, category: string, fileName: string): Promise<string | null> {
     const cacheKey = `${(dirHandle as any).name}/documents/${category}/${fileName}`;
     const cached = this.urlCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      this.urlCache.delete(cacheKey);
+      this.urlCache.set(cacheKey, cached);
+      return cached;
+    }
 
     try {
       const catDir = await this.ensureCategoryDir(dirHandle, category);
       const fileHandle = await catDir.getFileHandle(fileName);
       const file = await fileHandle.getFile();
       const url = URL.createObjectURL(file);
-      this.urlCache.set(cacheKey, url);
+      this.addToCache(cacheKey, url);
       return url;
     } catch (err) {
       console.error(`Impossible de lire documents/${category}/${fileName}`, err);

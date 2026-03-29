@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import { fileSystem } from '../../services/FileSystemService';
 import type { DocumentCategory, PatientDocument, ClinicInfo } from '../../types';
@@ -57,16 +57,16 @@ export default function DocumentationTab() {
 
   const docs = patient.documents || [];
 
-  const filteredDocs = docs
+  const filteredDocs = useMemo(() => docs
     .filter(d => filterCategory === 'ALL' || d.category === filterCategory)
     .filter(d => !searchQuery || d.displayName.toLowerCase().includes(searchQuery.toLowerCase()) || d.category.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
       if (sortBy === 'date') return b.dateAdded.localeCompare(a.dateAdded);
       if (sortBy === 'name') return a.displayName.localeCompare(b.displayName);
       return a.category.localeCompare(b.category);
-    });
+    }), [docs, filterCategory, searchQuery, sortBy]);
 
-  const categoryCount = (cat: DocumentCategory) => docs.filter(d => d.category === cat).length;
+  const categoryCount = useCallback((cat: DocumentCategory) => docs.filter(d => d.category === cat).length, [docs]);
 
   const triggerUpload = (cat: DocumentCategory) => {
     setActiveCategory(cat);

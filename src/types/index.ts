@@ -191,6 +191,9 @@ export interface PatientRecord {
   // Sessions
   sessions: ClinicalSession[];
   activeSessionId: string;
+
+  // Schema migration
+  _version?: number;
 }
 
 export interface InsuranceCriteria {
@@ -224,8 +227,8 @@ export interface OrthoDiagState {
   // File System Access
   isHubConnected: boolean;
   setHubConnected: (connected: boolean) => void;
-  patientDirectory: any | null; // using any to avoid TS FileSystemDirectoryHandle missing type error if lib isn't perfectly configured
-  setPatientDirectory: (handle: any | null) => void;
+  patientDirectory: FileSystemDirectoryHandle | null;
+  setPatientDirectory: (handle: FileSystemDirectoryHandle | null) => void;
 
   // Active App State
   activeTab: string;
@@ -239,8 +242,8 @@ export interface OrthoDiagState {
   updateSettings: (partial: Partial<AppSettings>) => void;
 
   // Global Updater (Optimized for performance)
-  updatePatientField: (field: keyof PatientRecord | string, value: any) => void;
-  updateSessionField: (sessionId: string, field: keyof ClinicalSession | string, value: any) => void;
+  updatePatientField: (field: keyof PatientRecord | string, value: string | number | boolean | string[] | Record<string, unknown>) => void;
+  updateSessionField: (sessionId: string, field: keyof ClinicalSession | string, value: string | number | boolean | string[] | Record<string, unknown>) => void;
   
   // Sessions Management
   addSession: (session: ClinicalSession) => void;

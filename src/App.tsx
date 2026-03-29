@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useStore } from './store/useStore';
 import InfoTab from './components/tabs/InfoTab';
 import DocumentationTab from './components/tabs/DocumentationTab';
@@ -11,46 +11,33 @@ import SettingsTab from './components/tabs/SettingsTab';
 import PriseEnChargeTab from './components/tabs/PriseEnChargeTab';
 import SessionSelector from './components/tabs/SessionSelector';
 import PatientHub from './components/views/PatientHub';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { fileSystem } from './services/FileSystemService';
+import { INFO_FIELDS, CLIN_FIELDS, MOUL_FIELDS, RADIO_FIELDS, TRAIT_FIELDS, countFilled } from './constants/fields';
+import { calculateAge } from './utils/age';
+import type { PatientRecord } from './types';
 
 type SaveStatus = 'saved' | 'saving' | 'idle';
 
-function useCompletionBadges(patient: ReturnType<typeof useStore>['patient']) {
-  const s = patient.sessions.find(s => s.id === patient.activeSessionId) || patient.sessions[0];
-  if (!s) return { info: '0', docs: '0', clin: '0', moul: '0', radio: '0' };
+function useCompletionBadges(patient: PatientRecord) {
+  const s = patient.sessions.find(ses => ses.id === patient.activeSessionId) || patient.sessions[0];
+  if (!s) return { info: '0', docs: '0', clin: '0', moul: '0', radio: '0', trait: '0' };
 
-  const countFilled = (fields: string[], obj: any) => fields.filter(f => !!obj[f]).length;
-
-  const infoFields = ['nom', 'prenom', 'sexe', 'dateNaissance', 'avs', 'medecinTraitant'];
-  const infoTotal = infoFields.length;
-  const infoDone = countFilled(infoFields, patient);
-
-  const clinFields = ['face','symetrieVisage','profil','angleNasolabial','angleLabiomental','troisQuarts','gummySmile','symetrieSourire','competenceLabiale','expoIncisives','overjet','classeCanineD','classeCanineG','classeMolaireD','classeMolaireG','overbite','cdsD','cdsG','lm','hygieneClin','phenotype'];
-  const clinTotal = clinFields.length;
-  const clinDone = countFilled(clinFields, s);
-
-  const moulFields = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26','t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
-  const moulTotal = moulFields.length;
-  const moulDone = countFilled(moulFields, s);
-
-  const radioFields = ['sna','snb','anb','wits','snSpaspp','spasppMego','snMego','incisifSn','incisifSpaspp','incisifMego','incisifIncisif','stadeMaturation'];
-  const radioTotal = radioFields.length;
-  const radioDone = countFilled(radioFields, s);
-
+  const infoDone = countFilled(INFO_FIELDS, patient);
+  const clinDone = countFilled(CLIN_FIELDS, s);
+  const moulDone = countFilled(MOUL_FIELDS, s);
+  const radioDone = countFilled(RADIO_FIELDS, s);
   const docsCount = (patient.documents || []).length;
-
-  const traitFields = ['planTraitement1','planTraitement2','planTraitement3','planTraitement4','planTraitement5'];
-  const traitDone = countFilled(traitFields, s);
-  const traitTotal = traitFields.length;
+  const traitDone = countFilled(TRAIT_FIELDS, s);
 
   const fmt = (done: number, total: number) => done === 0 ? '0' : done === total ? 'ok' : `${done}`;
 
   return {
-    info: fmt(infoDone, infoTotal),
+    info: fmt(infoDone, INFO_FIELDS.length),
     docs: docsCount > 0 ? `${docsCount}` : '0',
-    clin: fmt(clinDone, clinTotal),
-    moul: fmt(moulDone, moulTotal),
-    radio: fmt(radioDone, radioTotal),
+    clin: fmt(clinDone, CLIN_FIELDS.length),
+    moul: fmt(moulDone, MOUL_FIELDS.length),
+    radio: fmt(radioDone, RADIO_FIELDS.length),
     trait: traitDone > 0 ? 'ok' : '0',
   };
 }
@@ -68,20 +55,14 @@ export default function App() {
   const badges = useCompletionBadges(patient);
 
   // Global completion score
-  const completionScore = (() => {
-    const s = patient.sessions.find(s => s.id === patient.activeSessionId) || patient.sessions[0];
-    if (!s) return 0;
-    const countFilled = (fields: string[], obj: any) => fields.filter(f => !!obj[f]).length;
-    const infoFields = ['nom', 'prenom', 'sexe', 'dateNaissance', 'avs', 'medecinTraitant'];
-    const clinFields = ['face','symetrieVisage','profil','angleNasolabial','angleLabiomental','troisQuarts','gummySmile','symetrieSourire','competenceLabiale','expoIncisives','overjet','classeCanineD','classeCanineG','classeMolaireD','classeMolaireG','overbite','cdsD','cdsG','lm','hygieneClin','phenotype'];
-    const moulFields = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26','t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
-    const radioFields = ['sna','snb','anb','wits','snSpaspp','spasppMego','snMego','incisifSn','incisifSpaspp','incisifMego','incisifIncisif','stadeMaturation'];
-    const traitFields = ['planTraitement1','planTraitement2','planTraitement3','planTraitement4','planTraitement5'];
-    const traitOk = traitFields.some(f => !!(s as any)[f]) ? 1 : 0;
-    const total = infoFields.length + clinFields.length + moulFields.length + radioFields.length + 1;
-    const done = countFilled(infoFields, patient) + countFilled(clinFields, s) + countFilled(moulFields, s) + countFilled(radioFields, s) + traitOk;
+  const completionScore = useMemo(() => {
+    const ses = patient.sessions.find(x => x.id === patient.activeSessionId) || patient.sessions[0];
+    if (!ses) return 0;
+    const traitOk = TRAIT_FIELDS.some(f => !!(ses as any)[f]) ? 1 : 0;
+    const total = INFO_FIELDS.length + CLIN_FIELDS.length + MOUL_FIELDS.length + RADIO_FIELDS.length + 1;
+    const done = countFilled(INFO_FIELDS, patient) + countFilled(CLIN_FIELDS, ses) + countFilled(MOUL_FIELDS, ses) + countFilled(RADIO_FIELDS, ses) + traitOk;
     return Math.round((done / total) * 100);
-  })();
+  }, [patient]);
 
   const forceSave = useCallback(() => {
     if (!isHubConnected || !patientDirectory) return;
@@ -110,10 +91,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setActiveTab, forceSave]);
 
-  // Reset lastSavedRef when switching patients
+  // Reset lastSavedRef and revoke blob URLs when switching patients
   useEffect(() => {
     if (patientDirectory) {
       lastSavedRef.current = '';
+    } else {
+      fileSystem.revokeAllUrls();
     }
   }, [patientDirectory]);
 
@@ -127,7 +110,7 @@ export default function App() {
         fileSystem.savePatientData(patientDirectory, patient)
           .then(() => { lastSavedRef.current = serialized; setSaveStatus('saved'); })
           .catch(() => setSaveStatus('idle'));
-      }, 1000);
+      }, 2000);
       return () => clearTimeout(timeout);
     }
   }, [patient, isHubConnected, patientDirectory]);
@@ -143,20 +126,10 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isHubConnected, patientDirectory, patient]);
 
-  let ageCalcule = "";
-  if (patient.dateNaissance) {
-    const from = new Date(patient.dateNaissance);
-    const to = patient.datePremiereConsult ? new Date(patient.datePremiereConsult) : new Date();
-    if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
-      let m = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
-      if (to.getDate() < from.getDate()) m--;
-      const yStr = Math.floor(m / 12) > 0 ? `${Math.floor(m / 12)}a ` : "";
-      ageCalcule = `${yStr}${m % 12}m`;
-    }
-  }
+  const ageCalcule = calculateAge(patient.dateNaissance, patient.datePremiereConsult)?.display || '';
 
   if (!isHubConnected || !patientDirectory) {
-    return <PatientHub />;
+    return <ErrorBoundary><PatientHub /></ErrorBoundary>;
   }
 
   const badgeStyle = (val: string, color: string) => {
@@ -175,8 +148,9 @@ export default function App() {
   ];
 
   return (
+    <ErrorBoundary>
     <div className="app-container">
-      <aside className="sidebar no-print">
+      <aside className="sidebar no-print" role="navigation" aria-label="Navigation principale">
         <div className="sidebar-header">
           <h1 className="sidebar-brand">OrthoDiag</h1>
           <button className="btn-back" onClick={() => { forceSave(); setPatientDirectory(null); setActiveTab('overview'); }}>
@@ -252,7 +226,7 @@ export default function App() {
         </nav>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" role="main" aria-label="Contenu principal">
         <div className="module-container" style={{ maxWidth: '1100px' }}>
           {['overview','clinique','moulages','cepha'].includes(activeTab) && (
             <div className="session-bar no-print">
@@ -283,5 +257,6 @@ export default function App() {
         </div>
       </main>
     </div>
+    </ErrorBoundary>
   );
 }

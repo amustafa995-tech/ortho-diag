@@ -1,7 +1,8 @@
 
 import { useStore } from '../../store/useStore';
-import { Select, Checkbox, ClinicalToggle, InlineMetric, TwoWayCheck, useFieldMapping } from '../ui/Forms';
+import { Select, Checkbox, ClinicalToggle, InlineMetric, useFieldMapping } from '../ui/Forms';
 import { handleEnterKey } from '../ui/Forms';
+import { EXTRA_ORAL_FIELDS, INTRA_ORAL_FIELDS, countFilled } from '../../constants/fields';
 
 // Ligne paro alignée : checkbox (largeur fixe) + input pleine largeur sur la même ligne
 function ParoRow({ label, stateField, detailField, ti }: { label: string; stateField: string; detailField: string; ti?: number }) {
@@ -26,14 +27,12 @@ function ParoRow({ label, stateField, detailField, ti }: { label: string; stateF
 
 export default function ClinicalTab() {
   const patient = useStore(state => state.patient);
+  const updateSessionField = useStore(state => state.updateSessionField);
   const activeSessionId = patient.activeSessionId;
   const activeSession = patient.sessions.find(s => s.id === activeSessionId) || patient.sessions[0];
 
-  const extraOralFields = ['face','symetrieVisage','profil','angleNasolabial','angleLabiomental','troisQuarts','gummySmile','symetrieSourire','competenceLabiale','expoIncisives'];
-  const extraOralDone = extraOralFields.filter(f => !!(activeSession as any)[f]).length;
-
-  const intraOralFields = ['overjet','classeCanineD','classeCanineG','classeMolaireD','classeMolaireG','overbite','cdsD','cdsG','lm'];
-  const intraOralDone = intraOralFields.filter(f => !!(activeSession as any)[f]).length;
+  const extraOralDone = countFilled(EXTRA_ORAL_FIELDS, activeSession);
+  const intraOralDone = countFilled(INTRA_ORAL_FIELDS, activeSession);
 
   return (
     <div className="module-content tab-clin">
@@ -43,7 +42,7 @@ export default function ClinicalTab() {
       <div className="card">
         <div className="card-header">
           <h3>Extra-Oral</h3>
-          <span className={`completion-badge ${extraOralDone === extraOralFields.length ? 'complete' : ''}`}>{extraOralDone}/{extraOralFields.length}</span>
+          <span className={`completion-badge ${extraOralDone === EXTRA_ORAL_FIELDS.length ? 'complete' : ''}`}>{extraOralDone}/{EXTRA_ORAL_FIELDS.length}</span>
         </div>
 
         <div className="grid-2">
@@ -57,7 +56,7 @@ export default function ClinicalTab() {
               </div>
               {activeSession.symetrieVisage === "Asymétrique" && (
                 <div style={{ paddingLeft: 'var(--sp-2)', marginTop: 'var(--sp-1)' }}>
-                  <input type="text" name="asymetrieDetails" value={activeSession.asymetrieDetails || ''} onChange={(e) => useStore.getState().updateSessionField(activeSessionId, 'asymetrieDetails', e.target.value)} placeholder="Détails de l'asymétrie..." tabIndex={102} className="detail-fade" style={{ width: '100%' }} />
+                  <input type="text" name="asymetrieDetails" value={activeSession.asymetrieDetails || ''} onChange={(e) => updateSessionField(activeSessionId, 'asymetrieDetails', e.target.value)} placeholder="Détails de l'asymétrie..." tabIndex={102} className="detail-fade" style={{ width: '100%' }} />
                 </div>
               )}
             </div>
@@ -85,7 +84,7 @@ export default function ClinicalTab() {
                 <Select label="Gummy Smile" name="gummySmile" options={["Non", "Oui (Léger)", "Oui (Sévère)"]} ti={130} />
                 <div className="flex-row">
                   <label style={{ margin: 0, fontWeight: 600, fontSize: 'var(--fs-value)' }}>Expo. Inc.</label>
-                  <input type="text" inputMode="numeric" name="expoIncisives" value={activeSession.expoIncisives || ''} onChange={(e) => useStore.getState().updateSessionField(activeSessionId, 'expoIncisives', e.target.value)} tabIndex={133} className={`inline-metric-input ${!activeSession.expoIncisives ? 'field-empty' : ''}`} style={{ width: '50px' }} />
+                  <input type="text" inputMode="numeric" name="expoIncisives" value={activeSession.expoIncisives || ''} onChange={(e) => updateSessionField(activeSessionId, 'expoIncisives', e.target.value)} tabIndex={133} className={`inline-metric-input ${!activeSession.expoIncisives ? 'field-empty' : ''}`} style={{ width: '50px' }} />
                   <span className="text-muted">%</span>
                 </div>
               </div>
@@ -98,7 +97,7 @@ export default function ClinicalTab() {
       <div className="card">
         <div className="card-header">
           <h3>Intra-Oral</h3>
-          <span className={`completion-badge ${intraOralDone === intraOralFields.length ? 'complete' : ''}`}>{intraOralDone}/{intraOralFields.length}</span>
+          <span className={`completion-badge ${intraOralDone === INTRA_ORAL_FIELDS.length ? 'complete' : ''}`}>{intraOralDone}/{INTRA_ORAL_FIELDS.length}</span>
         </div>
 
         <div className="intra-oral-grid">
@@ -143,40 +142,40 @@ export default function ClinicalTab() {
                   <span style={{ fontSize: 'var(--fs-value)', fontWeight: 600, color: 'var(--c-text-secondary)', minWidth: '22px' }}>LM</span>
                   {(['Centré','Dévié'] as const).map((opt, idx) => (
                     <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0 }}>
-                      <input type="checkbox" checked={activeSession.lm === opt} tabIndex={240 + idx} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'lm', e.target.checked ? opt : '')} style={{ margin: 0 }} />
+                      <input type="checkbox" checked={activeSession.lm === opt} tabIndex={240 + idx} onChange={e => updateSessionField(activeSessionId, 'lm', e.target.checked ? opt : '')} style={{ margin: 0 }} />
                       {opt}
                     </label>
                   ))}
                 </div>
                 {activeSession.lm === 'Dévié'
-                  ? <input type="text" name="lmDetails" value={activeSession.lmDetails || ''} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'lmDetails', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
+                  ? <input type="text" name="lmDetails" value={activeSession.lmDetails || ''} onChange={e => updateSessionField(activeSessionId, 'lmDetails', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
                   : <span />
                 }
                 {/* X/S Bite row */}
                 <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0 }}>
-                  <input type="checkbox" name="hasXSBitePost" checked={!!activeSession.hasXSBitePost} tabIndex={243} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'hasXSBitePost', e.target.checked)} style={{ margin: 0 }} />
+                  <input type="checkbox" name="hasXSBitePost" checked={!!activeSession.hasXSBitePost} tabIndex={243} onChange={e => updateSessionField(activeSessionId, 'hasXSBitePost', e.target.checked)} style={{ margin: 0 }} />
                   X/S Bite post.
                 </label>
                 {activeSession.hasXSBitePost
-                  ? <input type="text" name="xsbitePostDent" value={activeSession.xsbitePostDent || ''} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'xsbitePostDent', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
+                  ? <input type="text" name="xsbitePostDent" value={activeSession.xsbitePostDent || ''} onChange={e => updateSessionField(activeSessionId, 'xsbitePostDent', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
                   : <span />
                 }
                 {/* Insurance detection */}
                 <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0, whiteSpace: 'nowrap' }}>
-                    <input type="checkbox" name="hasArticuleCiseaux" checked={!!activeSession.hasArticuleCiseaux} tabIndex={245} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'hasArticuleCiseaux', e.target.checked)} style={{ margin: 0 }} />
+                    <input type="checkbox" name="hasArticuleCiseaux" checked={!!activeSession.hasArticuleCiseaux} tabIndex={245} onChange={e => updateSessionField(activeSessionId, 'hasArticuleCiseaux', e.target.checked)} style={{ margin: 0 }} />
                     Articulé ciseaux (208)
                   </label>
                   <span className="ins-desc">— Anomalie transversale unilatérale</span>
                 </div>
                 <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0, whiteSpace: 'nowrap' }}>
-                    <input type="checkbox" name="hasBeanceLateroPost" checked={!!activeSession.hasBeanceLateroPost} tabIndex={246} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'hasBeanceLateroPost', e.target.checked)} style={{ margin: 0 }} />
+                    <input type="checkbox" name="hasBeanceLateroPost" checked={!!activeSession.hasBeanceLateroPost} tabIndex={246} onChange={e => updateSessionField(activeSessionId, 'hasBeanceLateroPost', e.target.checked)} style={{ margin: 0 }} />
                     Béance latéro-post. (HG)
                   </label>
                   <span className="ins-desc">— Sur ≥2 paires de dents (hors 8)</span>
                   {activeSession.hasBeanceLateroPost && (
-                    <input type="text" name="beanceLateroPostDent" value={activeSession.beanceLateroPostDent || ''} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'beanceLateroPostDent', e.target.value)} placeholder="Dents concernées..." className="detail-fade" style={{ width: '150px', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
+                    <input type="text" name="beanceLateroPostDent" value={activeSession.beanceLateroPostDent || ''} onChange={e => updateSessionField(activeSessionId, 'beanceLateroPostDent', e.target.value)} placeholder="Dents concernées..." className="detail-fade" style={{ width: '150px', padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
                   )}
                 </div>
               </div>

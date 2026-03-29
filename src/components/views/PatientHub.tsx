@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useStore, initialSession } from '../../store/useStore';
-import { fileSystem } from '../../services/FileSystemService';
+import { useStore, createInitialSession } from '../../store/useStore';
+import { fileSystem, FileSystemService } from '../../services/FileSystemService';
 import type { PatientDirectory } from '../../services/FileSystemService';
+import type { PatientRecord } from '../../types';
 
 type SortKey = 'name' | 'folder';
 
@@ -34,8 +35,8 @@ export default function PatientHub() {
       } else {
         setError("Accès au dossier refusé ou annulé.");
       }
-    } catch (err: any) {
-      setError(err.message || "Erreur lors de la connexion au dossier.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la connexion au dossier.");
     } finally {
       setLoading(false);
     }
@@ -68,16 +69,20 @@ export default function PatientHub() {
   const openPatient = async (dir: PatientDirectory) => {
     try {
       setLoading(true);
-      const data = await fileSystem.loadPatientData(dir.handle);
-      if (data) {
-        importPatientData(data);
+      const result = await fileSystem.loadPatientData(dir.handle);
+      if (result.data) {
+        importPatientData(result.data);
         setPatientDirectory(dir.handle);
         setActiveTab('overview');
+        if (result.error) {
+          // Restored from backup — notify user
+          alert(result.error);
+        }
       } else {
-        setError(`Le dossier ${dir.folderName} est vide ou le fichier JSON est corrompu.`);
+        setError(result.error || `Le dossier ${dir.folderName} est vide ou corrompu.`);
       }
     } catch (err) {
-      setError("Impossible d'ouvrir ce dossier.");
+      setError("Impossible d'ouvrir ce dossier : " + (err instanceof Error ? err.message : ''));
     } finally {
       setLoading(false);
     }
@@ -89,8 +94,8 @@ export default function PatientHub() {
     try {
       await fileSystem.deletePatientDirectory(dir.folderName);
       await refreshPatients();
-    } catch (err: any) {
-      setError("Impossible de supprimer : " + err.message);
+    } catch (err) {
+      setError("Impossible de supprimer : " + (err instanceof Error ? err.message : ''));
     }
   };
 
@@ -100,7 +105,12 @@ export default function PatientHub() {
       return;
     }
 
-    const folderName = `${newPatientNom.trim().toUpperCase()}_${newPatientPrenom.trim()}`.replace(/[^\p{L}\p{N}_-]/gu, '');
+    const rawFolder = `${newPatientNom.trim().toUpperCase()}_${newPatientPrenom.trim()}`.replace(/[^\p{L}\p{N}_-]/gu, '');
+    const folderName = FileSystemService.sanitizeFolderName(rawFolder);
+    if (!folderName) {
+      alert("Nom de dossier invalide.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -109,7 +119,7 @@ export default function PatientHub() {
       const handle = await fileSystem.createPatientDirectory(folderName);
 
       const newSession = {
-        ...initialSession,
+        ...createInitialSession(),
         id: 'T0',
         date: new Date().toISOString().split('T')[0],
         nomSession: 'Bilan Initial (T0)',
@@ -136,18 +146,18 @@ export default function PatientHub() {
         activeSessionId: 'T0',
       };
 
-      await fileSystem.savePatientData(handle, emptyPatient as any);
+      await fileSystem.savePatientData(handle, emptyPatient as PatientRecord);
       await refreshPatients();
 
-      importPatientData(emptyPatient as any);
+      importPatientData(emptyPatient as PatientRecord);
       setPatientDirectory(handle);
       setActiveTab('overview');
 
       setNewPatientNom('');
       setNewPatientPrenom('');
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError("Impossible de créer le patient : " + err.message);
+      setError("Impossible de créer le patient : " + (err instanceof Error ? err.message : ''));
     } finally {
       setLoading(false);
     }
@@ -267,9 +277,13 @@ export default function PatientHub() {
 
       {/* Modal Nouveau Patient */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }}
+          role="dialog" aria-modal="true" aria-labelledby="new-patient-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setIsModalOpen(false); }}
+        >
           <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '400px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
-            <h2 style={{ margin: '0 0 1.5rem 0', color: '#0f172a', fontSize: '1.25rem' }}>Nouveau Patient</h2>
+            <h2 id="new-patient-title" style={{ margin: '0 0 1.5rem 0', color: '#0f172a', fontSize: '1.25rem' }}>Nouveau Patient</h2>
 
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#475569', fontSize: '0.875rem' }}>Nom <span style={{ color: '#ef4444' }}>*</span></label>

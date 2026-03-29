@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useStore } from '../../store/useStore';
-import { initialSession } from '../../store/useStore';
+import { useStore, generateId, createInitialSession } from '../../store/useStore';
 
 export default function SessionSelector() {
   const patient = useStore(state => state.patient);
@@ -23,12 +22,13 @@ export default function SessionSelector() {
   }, [isModalOpen, closeModal]);
 
   const handleAddSession = () => {
-    const newId = `T${sessions.length}`;
+    const idx = sessions.length;
+    const newId = generateId();
     addSession({
-      ...initialSession,
+      ...createInitialSession(),
       id: newId,
       date: newDate,
-      nomSession: `Évaluation ${newId}`,
+      nomSession: `Évaluation T${idx}`,
     });
     setNewDate(new Date().toISOString().split('T')[0]);
   };
@@ -54,10 +54,13 @@ export default function SessionSelector() {
       </button>
 
       {isModalOpen && (
-        <div className="modal-overlay" style={{position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(15,23,42,0.4)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
+        <div className="modal-overlay" style={{position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(15,23,42,0.4)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}
+          role="dialog" aria-modal="true" aria-labelledby="session-modal-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
+        >
           <div className="card" style={{width:'400px', backgroundColor:'#fff', padding:'1.5rem', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)'}}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem'}}>
-              <h3 style={{margin:0, fontSize:'1.1rem', color:'#0f172a'}}>Gestion des Sessions</h3>
+              <h3 id="session-modal-title" style={{margin:0, fontSize:'1.1rem', color:'#0f172a'}}>Gestion des Sessions</h3>
               <button onClick={() => setIsModalOpen(false)} style={{background:'none', border:'none', fontSize:'1.5rem', cursor:'pointer', color:'#64748b'}}>×</button>
             </div>
             

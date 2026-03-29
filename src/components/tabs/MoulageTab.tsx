@@ -1,6 +1,8 @@
 
+import { useCallback, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { Input, Select } from '../ui/Forms';
+import { MAX_TEETH_KEYS, MAX_TEETH_LABELS, MAND_TEETH_KEYS, MAND_TEETH_LABELS, DISP_FIELDS, DIST_FIELDS } from '../../constants/fields';
 
 const DROSCHL_TABLE = [
   {sum:19.5, maxM:21.3, mandM:20.8, maxF:20.2, mandF:20.0},
@@ -21,10 +23,26 @@ const DROSCHL_TABLE = [
   {sum:27.0, maxM:24.0, mandM:23.9, maxF:24.0, mandF:24.0},
 ] as const;
 
-const MAX_TEETH_KEYS = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26'];
-const MAX_TEETH_LABELS = ['16','15','14','13','12','11','21','22','23','24','25','26'];
-const MAND_TEETH_KEYS = ['t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
-const MAND_TEETH_LABELS = ['46','45','44','43','42','41','31','32','33','34','35','36'];
+
+// Extracted outside component — no dependency on component state
+const BilanVal = ({v, d, nec}:{v:number|null, d?:string|number, nec?:number}) => {
+  if (v === null) return <span style={{color:'#94a3b8'}}>—</span>;
+  const color = v < 0 ? '#dc2626' : '#1e40af';
+  return (
+    <div style={{display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1.2}}>
+      <span style={{fontWeight:700, color}}>{v > 0 ? '+' : ''}{v} mm</span>
+      {d !== undefined && nec !== undefined && (
+        <span style={{fontSize:'0.65rem', color:'#94a3b8', marginTop:'2px', fontWeight:500}}>({d} - {nec})</span>
+      )}
+    </div>
+  );
+};
+
+const DeltaVal = ({v}:{v:number|null}) => {
+  if (v === null) return <span style={{color:'#94a3b8'}}>—</span>;
+  const color = v < 0 ? '#dc2626' : '#1e40af';
+  return <span style={{fontWeight:700, color}}>{v} mm</span>;
+};
 
 export default function MoulageTab() {
   const patient = useStore(state => state.patient);
@@ -122,31 +140,23 @@ export default function MoulageTab() {
   const dInfTot = totalInf !== null ? Math.round((parseFloat(dI1||'0')+parseFloat(dI2||'0')+parseFloat(dI3||'0')+parseFloat(dI4||'0'))*10)/10 : undefined;
   const necInfTot = totalInf !== null ? Math.round((necInf4543+necInf4241+necInf3132+necInf3335)*10)/10 : undefined;
 
-  const sumMax6 = n('t13')+n('t12')+n('t11')+n('t21')+n('t22')+n('t23');
-  const sumMand6 = n('t43')+n('t42')+n('t41')+n('t31')+n('t32')+n('t33');
-  const sumMax12 = MAX_TEETH_KEYS.reduce((s,k) => s+n(k), 0);
-  const sumMand12 = MAND_TEETH_KEYS.reduce((s,k) => s+n(k), 0);
-  const ratio6 = sumMax6 > 0 ? sumMand6/sumMax6 : 0;
-  const ratio12 = sumMax12 > 0 ? sumMand12/sumMax12 : 0;
-  const bolton6Pct = Math.round(ratio6 * 1000) / 10;
-  const bolton12Pct = Math.round(ratio12 * 1000) / 10;
-  const bolton6Excess = ratio6 > 0.772 ? Math.round((sumMand6 - sumMax6*0.772)*10)/10 : Math.round((sumMax6 - sumMand6/0.772)*10)/10;
-  const bolton12Excess = ratio12 > 0.913 ? Math.round((sumMand12 - sumMax12*0.913)*10)/10 : Math.round((sumMax12 - sumMand12/0.913)*10)/10;
+  const bolton = useMemo(() => {
+    const sumMax6 = n('t13')+n('t12')+n('t11')+n('t21')+n('t22')+n('t23');
+    const sumMand6 = n('t43')+n('t42')+n('t41')+n('t31')+n('t32')+n('t33');
+    const sumMax12 = MAX_TEETH_KEYS.reduce((s,k) => s+n(k), 0);
+    const sumMand12 = MAND_TEETH_KEYS.reduce((s,k) => s+n(k), 0);
+    const ratio6 = sumMax6 > 0 ? sumMand6/sumMax6 : 0;
+    const ratio12 = sumMax12 > 0 ? sumMand12/sumMax12 : 0;
+    return {
+      pct6: Math.round(ratio6 * 1000) / 10,
+      pct12: Math.round(ratio12 * 1000) / 10,
+      excess6: ratio6 > 0.772 ? Math.round((sumMand6 - sumMax6*0.772)*10)/10 : Math.round((sumMax6 - sumMand6/0.772)*10)/10,
+      excess12: ratio12 > 0.913 ? Math.round((sumMand12 - sumMax12*0.913)*10)/10 : Math.round((sumMax12 - sumMand12/0.913)*10)/10,
+      ratio6, ratio12,
+    };
+  }, [activeSession]);
 
-  const BilanVal = ({v, d, nec}:{v:number|null, d?:string|number, nec?:number}) => {
-    if (v === null) return <span style={{color:'#94a3b8'}}>—</span>;
-    const color = v < 0 ? '#dc2626' : '#1e40af';
-    return (
-      <div style={{display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1.2}}>
-        <span style={{fontWeight:700, color}}>{v > 0 ? '+' : ''}{v} mm</span>
-        {d !== undefined && nec !== undefined && (
-          <span style={{fontSize:'0.65rem', color:'#94a3b8', marginTop:'2px', fontWeight:500}}>({d} - {nec})</span>
-        )}
-      </div>
-    );
-  };
-
-  const renderTeethInput = (name: string, label: string, ti: number) => (
+  const renderTeethInput = useCallback((name: string, label: string, ti: number) => (
     <div key={name} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'2px',flex:1,minWidth:0}}>
       <span style={{fontSize:'0.65rem',color:'#64748b',fontWeight:600}}>{label}</span>
       <input type="text" inputMode="decimal" name={name} value={(activeSession as any)[name]||''} onChange={handleChange} tabIndex={ti}
@@ -154,13 +164,7 @@ export default function MoulageTab() {
         style={{width:'100%',padding:'0.25rem',fontSize:'0.8rem',textAlign:'center',borderRadius:'4px',color:'#0f172a',background:'#fff',boxShadow:'inset 0 1px 2px rgba(0,0,0,0.05)'}}
       />
     </div>
-  );
-
-  const DeltaVal = ({v}:{v:number|null}) => {
-    if (v === null) return <span style={{color:'#94a3b8'}}>—</span>;
-    const color = v < 0 ? '#dc2626' : '#1e40af';
-    return <span style={{fontWeight:700, color}}>{v} mm</span>;
-  };
+  ), [activeSession, handleChange]);
 
   return (
     <div className="module-content tab-moul">
@@ -201,7 +205,7 @@ export default function MoulageTab() {
       <div className="card">
         <div className="card-header">
           <h3>Espace Disponible</h3>
-          <span className={`completion-badge ${['dispSup1513','dispSup1211','dispSup2122','dispSup2325','dispInf4543','dispInf4241','dispInf3132','dispInf3335'].every(k=>n(k)>0) ? 'complete' : ''}`}>{['dispSup1513','dispSup1211','dispSup2122','dispSup2325','dispInf4543','dispInf4241','dispInf3132','dispInf3335'].filter(k=>n(k)>0).length}/8</span>
+          <span className={`completion-badge ${DISP_FIELDS.every(k=>n(k)>0) ? 'complete' : ''}`}>{DISP_FIELDS.filter(k=>n(k)>0).length}/{DISP_FIELDS.length}</span>
         </div>
         <div className="espace-dispo-grid">
           <Input label="15-13" name="dispSup1513" />
@@ -280,22 +284,22 @@ export default function MoulageTab() {
               <tbody>
                 <tr style={{borderBottom:'1px solid #f8fafc'}}>
                   <td style={{padding:'0.3rem', fontWeight:600}}>Antérieur (12)</td>
-                  <td style={{padding:'0.3rem', textAlign:'center', color: hasInc ? '#0f172a' : '#94a3b8'}}>{hasInc ? `${bolton6Pct}%` : '—'}</td>
+                  <td style={{padding:'0.3rem', textAlign:'center', color: hasInc ? '#0f172a' : '#94a3b8'}}>{hasInc ? `${bolton.pct6}%` : '—'}</td>
                   <td style={{padding:'0.3rem', textAlign:'center'}}>
-                    {hasInc && bolton6Excess > 0 ? (
-                      <span style={{color: ratio6 > 0.772 ? '#dc2626' : '#1e40af', fontWeight:600}}>
-                        {ratio6 > 0.772 ? 'Mand. ' : 'Max. '}+{bolton6Excess}mm
+                    {hasInc && bolton.excess6 > 0 ? (
+                      <span style={{color: bolton.ratio6 > 0.772 ? '#dc2626' : '#1e40af', fontWeight:600}}>
+                        {bolton.ratio6 > 0.772 ? 'Mand. ' : 'Max. '}+{bolton.excess6}mm
                       </span>
                     ) : (hasInc ? <span style={{color:'#10b981', fontWeight:600}}>Harmonieux</span> : <span style={{color:'#94a3b8'}}>—</span>)}
                   </td>
                 </tr>
                 <tr>
                   <td style={{padding:'0.3rem', fontWeight:600}}>Total (24)</td>
-                  <td style={{padding:'0.3rem', textAlign:'center', color: allFilled ? '#0f172a' : '#94a3b8'}}>{allFilled ? `${bolton12Pct}%` : '—'}</td>
+                  <td style={{padding:'0.3rem', textAlign:'center', color: allFilled ? '#0f172a' : '#94a3b8'}}>{allFilled ? `${bolton.pct12}%` : '—'}</td>
                   <td style={{padding:'0.3rem', textAlign:'center'}}>
-                     {allFilled && bolton12Excess > 0 ? (
-                      <span style={{color: ratio12 > 0.913 ? '#dc2626' : '#1e40af', fontWeight:600}}>
-                        {ratio12 > 0.913 ? 'Mand. ' : 'Max. '}+{bolton12Excess}mm
+                     {allFilled && bolton.excess12 > 0 ? (
+                      <span style={{color: bolton.ratio12 > 0.913 ? '#dc2626' : '#1e40af', fontWeight:600}}>
+                        {bolton.ratio12 > 0.913 ? 'Mand. ' : 'Max. '}+{bolton.excess12}mm
                       </span>
                     ) : (allFilled ? <span style={{color:'#10b981', fontWeight:600}}>Harmonieux</span> : <span style={{color:'#94a3b8'}}>—</span>)}
                   </td>
@@ -343,7 +347,7 @@ export default function MoulageTab() {
       <div className="card">
         <div className="card-header">
           <h3>Distances</h3>
-          <span className={`completion-badge ${['distInterMolSup','distInterMolInf','distPMSup','distPMInf','distCanSup','distCanInf'].every(k=>n(k)>0) ? 'complete' : ''}`}>{['distInterMolSup','distInterMolInf','distPMSup','distPMInf','distCanSup','distCanInf'].filter(k=>n(k)>0).length}/6</span>
+          <span className={`completion-badge ${DIST_FIELDS.every(k=>n(k)>0) ? 'complete' : ''}`}>{DIST_FIELDS.filter(k=>n(k)>0).length}/{DIST_FIELDS.length}</span>
         </div>
         <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.85rem', textAlign:'center'}}>
           <thead>
