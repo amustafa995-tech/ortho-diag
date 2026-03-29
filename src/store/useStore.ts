@@ -138,7 +138,17 @@ export const useStore = create<OrthoDiagState>()(
       }))
     }),
     {
-      name: 'orthodiag-storage', // saves to localStorage Automatically, fulfilling Phase 2 requirements
+      name: 'orthodiag-storage',
+      merge: (persisted: any, current: any) => {
+        const merged = { ...current, ...persisted };
+        // Deep-merge settings so new keys (like insuranceCriteria) are preserved
+        merged.settings = { ...current.settings, ...(persisted?.settings || {}) };
+        merged.settings.insuranceCriteria = {
+          ...current.settings.insuranceCriteria,
+          ...(persisted?.settings?.insuranceCriteria || {}),
+        };
+        return merged;
+      },
     }
   )
 );
