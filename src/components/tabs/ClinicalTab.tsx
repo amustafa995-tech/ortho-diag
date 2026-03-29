@@ -48,7 +48,7 @@ export default function ClinicalTab() {
 
         <div className="grid-2">
           {/* Colonne gauche : Face + Profil */}
-          <div className="flex-col gap-1">
+          <div className="flex-col gap-2">
             <div className="section-card">
               <h4 className="section-title">Face</h4>
               <div className="classes-grid">
@@ -70,7 +70,7 @@ export default function ClinicalTab() {
           </div>
 
           {/* Colonne droite : 3/4 + Sourire */}
-          <div className="flex-col gap-1">
+          <div className="flex-col gap-2">
             <div className="section-card">
               <h4 className="section-title">3/4</h4>
               <Select label="Trois-quarts" name="troisQuarts" options={["Harmonieux", "Plan"]} ti={120} />
@@ -121,7 +121,7 @@ export default function ClinicalTab() {
           <div className="v-divider" />
 
           {/* VERTICAL + TRANSVERSAL */}
-          <div className="flex-col gap-3">
+          <div className="flex-col gap-2">
             <div className="section-card">
               <h4 className="section-title">Vertical</h4>
               <div className="flex-row flex-wrap" style={{ marginBottom: 'var(--sp-1)' }}>
