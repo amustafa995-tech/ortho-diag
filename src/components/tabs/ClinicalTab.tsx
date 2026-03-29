@@ -101,7 +101,7 @@ export default function ClinicalTab() {
           <span className={`completion-badge ${intraOralDone === intraOralFields.length ? 'complete' : ''}`}>{intraOralDone}/{intraOralFields.length}</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) auto minmax(0,2fr)', gap: 'var(--sp-3)', alignItems: 'flex-start' }}>
+        <div className="intra-oral-grid">
           {/* SAGITTAL */}
           <div className="section-card">
             <h4 className="section-title">Sagittal</h4>

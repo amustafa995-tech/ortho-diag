@@ -32,17 +32,17 @@ export default function InfoTab() {
           <h3>Identité & Acteurs</h3>
           <span className={`completion-badge ${identityDone === identityFields.length ? 'complete' : ''}`}>{identityDone}/{identityFields.length}</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '0.7fr 1.2fr 1.2fr 1fr 0.5fr', gap: 'var(--sp-2)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr 1.2fr 1fr', gap: 'var(--sp-2)' }}>
           <Input label="ID" name="id" />
           <Input label="Nom" name="nom" />
           <Input label="Prénom" name="prenom" />
           <Select label="Praticien" name="praticien" options={settings.praticiens.map(p => p.abrev)} />
-          <Select label="Sexe" name="sexe" options={["M", "F"]} />
         </div>
-        <div className="grid-3" style={{ marginTop: 'var(--sp-2)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '0.5fr 1fr 1fr 0.6fr', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)' }}>
+          <Select label="Sexe" name="sexe" options={["M", "F"]} />
           <Input label="Date Naiss." name="dateNaissance" type="date" />
-          <Input label="Date 1ère Consult." name="datePremiereConsult" type="date" />
-          <Input label="Âge (Calculé)" name="age" overrideValue={ageCalcule} readOnly={true} />
+          <Input label="1ère Consult." name="datePremiereConsult" type="date" />
+          <Input label="Âge" name="age" overrideValue={ageCalcule} readOnly={true} />
         </div>
       </div>
 

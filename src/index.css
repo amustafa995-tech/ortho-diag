@@ -761,10 +761,24 @@ input.field-empty {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Intra-oral responsive grid ── */
+.intra-oral-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) auto minmax(0, 2fr);
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+
 /* ══ RESPONSIVE ══ */
 @media (max-width: 1024px) {
   .grid-2 { grid-template-columns: 1fr; }
   .overview-grid { grid-template-columns: 1fr; }
+  .intra-oral-grid {
+    grid-template-columns: 1fr;
+  }
+  .intra-oral-grid .v-divider {
+    display: none;
+  }
 }
 
 /* ══ PRINT ══ */

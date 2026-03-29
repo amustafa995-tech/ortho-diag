@@ -37,8 +37,7 @@ function useCompletionBadges(patient: ReturnType<typeof useStore>['patient']) {
   const radioTotal = radioFields.length;
   const radioDone = countFilled(radioFields, s);
 
-  const docsArrays = ['photosExtra','photosIntra','modelesStl','cephaloImages','opgImages','radioIntraImages'] as const;
-  const docsCount = docsArrays.reduce((sum, k) => sum + ((s as any)[k]?.length || 0), 0);
+  const docsCount = (patient.documents || []).length;
 
   const traitFields = ['planTraitement1','planTraitement2','planTraitement3','planTraitement4','planTraitement5'];
   const traitDone = countFilled(traitFields, s);
@@ -141,15 +140,19 @@ export default function App() {
     return <PatientHub />;
   }
 
-  const badgeClass = (val: string) => val === 'ok' ? 'nav-badge done' : val === '0' ? 'nav-badge' : 'nav-badge partial';
+  const badgeStyle = (val: string, color: string) => {
+    if (val === 'ok') return { background: `${color}18`, color, borderColor: `${color}40` };
+    if (val !== '0') return { background: `${color}10`, color: `${color}cc`, borderColor: `${color}30` };
+    return {};
+  };
 
   const tabs = [
-    { id: 'info', label: '1. Informations', key: '1', badge: badges.info },
-    { id: 'documents', label: '2. Documents', key: '2', badge: badges.docs },
-    { id: 'clinique', label: '3. Clinique', key: '3', badge: badges.clin },
-    { id: 'moulages', label: '4. Moulage', key: '4', badge: badges.moul },
-    { id: 'cepha', label: '5. Radio', key: '5', badge: badges.radio },
-    { id: 'traitement', label: '6. Traitement', key: '6', badge: badges.trait },
+    { id: 'info', label: '1. Informations', key: '1', badge: badges.info, color: '#3b82f6' },
+    { id: 'documents', label: '2. Documents', key: '2', badge: badges.docs, color: '#8b5cf6' },
+    { id: 'clinique', label: '3. Clinique', key: '3', badge: badges.clin, color: '#10b981' },
+    { id: 'moulages', label: '4. Moulage', key: '4', badge: badges.moul, color: '#f59e0b' },
+    { id: 'cepha', label: '5. Radio', key: '5', badge: badges.radio, color: '#ef4444' },
+    { id: 'traitement', label: '6. Traitement', key: '6', badge: badges.trait, color: '#6366f1' },
   ];
 
   return (
@@ -178,8 +181,14 @@ export default function App() {
             <span style={{ fontSize: 'var(--fs-badge)', fontWeight: 600, color: 'var(--c-text-secondary)' }}>Complétion</span>
             <span style={{ fontSize: 'var(--fs-badge)', fontWeight: 700, color: completionScore === 100 ? 'var(--c-filled)' : completionScore > 50 ? 'var(--c-primary)' : 'var(--c-text-muted)' }}>{completionScore}%</span>
           </div>
-          <div style={{ height: '4px', background: 'var(--c-border)', borderRadius: '2px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${completionScore}%`, background: completionScore === 100 ? 'var(--c-filled)' : 'var(--c-primary)', borderRadius: '2px', transition: 'width 0.3s' }} />
+          <div style={{ display: 'flex', gap: '2px', height: '4px' }}>
+            {tabs.map(tab => {
+              const isDone = tab.badge === 'ok' || (tab.id === 'documents' && tab.badge !== '0');
+              const isPartial = tab.badge !== '0' && tab.badge !== 'ok';
+              return (
+                <div key={tab.id} style={{ flex: 1, borderRadius: '2px', background: isDone ? tab.color : isPartial ? tab.color : 'var(--c-border)', opacity: isDone ? 1 : isPartial ? 0.4 : 0.2, transition: 'opacity 0.3s, background 0.3s' }} title={tab.label} />
+              );
+            })}
           </div>
         </div>
 
@@ -198,7 +207,7 @@ export default function App() {
               onClick={() => setActiveTab(tab.id)}
             >
               <span className="nav-label">{tab.label}</span>
-              <span className={badgeClass(tab.badge)}>{tab.badge === 'ok' ? '✓' : tab.badge}</span>
+              <span className="nav-badge" style={{ ...badgeStyle(tab.badge, tab.color), border: '1px solid' }}>{tab.badge === 'ok' ? '✓' : tab.badge}</span>
               <span className="nav-shortcut">{tab.key}</span>
             </button>
           ))}
@@ -226,7 +235,7 @@ export default function App() {
 
       <main className="main-content">
         <div className="module-container" style={{ maxWidth: '1100px' }}>
-          {activeTab !== 'settings' && activeTab !== 'priseencharge' && (
+          {['overview','clinique','moulages','cepha'].includes(activeTab) && (
             <div className="session-bar no-print">
               <SessionSelector />
               {(activeTab === 'moulages' || activeTab === 'cepha') && (
