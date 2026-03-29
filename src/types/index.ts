@@ -134,10 +134,30 @@ export interface PatientRecord {
   activeSessionId: string;
 }
 
+export interface InsuranceCriteria {
+  // AI criteria (< 20 ans)
+  ai208_anb: number;          // ANB threshold for micromandibulie (default 9)
+  ai208_anb_combo: number;    // ANB combined threshold (default 7)
+  ai208_snmego_combo: number; // SN-MeGo combined threshold (default 37)
+  ai208_overjet_screen: number; // Clinical screening OJ (default 9mm)
+  ai209_snmego_open: number;  // Mordex apertus SN-MeGo (default 40)
+  ai209_snmego_open_combo: number; // combined (default 37)
+  ai209_snmego_deep: number;  // Mordex clausus SN-MeGo max (default 12)
+  ai209_snmego_deep_combo: number; // combined (default 15)
+  ai210_anb: number;          // Prognathie inf ANB (default -1)
+  ai210_anb_combo: number;    // combined ANB (default 1)
+  // HG criteria
+  hg_overjet: number;         // OJ threshold (default 8)
+  hg_overbite_open_teeth: number; // Béance > N dents (default 6)
+  hg_encombrement: number;    // DDM encombrement threshold (default 8)
+  hg_age_max: number;         // Age max (default 18)
+}
+
 export interface AppSettings {
   dataSource: DataSource;
   doctors: Doctor[];
   praticiens: Praticien[];
+  insuranceCriteria: InsuranceCriteria;
 }
 
 export interface OrthoDiagState {

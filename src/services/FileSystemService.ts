@@ -57,6 +57,11 @@ export class FileSystemService {
     return await this.rootHandle.getDirectoryHandle(folderName, { create: true });
   }
 
+  async deletePatientDirectory(folderName: string): Promise<void> {
+    if (!this.rootHandle) throw new Error("Root handle manquant");
+    await (this.rootHandle as any).removeEntry(folderName, { recursive: true });
+  }
+
   async savePatientData(dirHandle: FileSystemDirectoryHandle, data: PatientRecord): Promise<void> {
     const fileHandle = await dirHandle.getFileHandle('data.json', { create: true });
     const writable = await (fileHandle as any).createWritable();

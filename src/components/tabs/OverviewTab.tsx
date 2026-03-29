@@ -1,4 +1,128 @@
 import { useStore } from '../../store/useStore';
+import type { InsuranceCriteria } from '../../types';
+
+// ── Insurance analysis ──
+type InsuranceResult = { code: string; label: string; status: 'eligible' | 'possible' | 'missing' | 'none'; detail: string; missing?: string[] };
+
+function analyzeInsurance(patient: any, s: any, criteria: InsuranceCriteria): { ai: InsuranceResult[]; lamal: InsuranceResult[]; hg: InsuranceResult[]; complementaire: InsuranceResult[] } {
+  const p = (field: string) => { const v = parseFloat(((s as any)[field] || '').toString().replace(',', '.')); return isNaN(v) ? null : v; };
+  const anb = p('anb');
+  const snMego = p('snMego');
+  const oj = p('overjet');
+  const ob = p('overbite');
+
+  // Age computation
+  let ageYears: number | null = null;
+  if (patient.dateNaissance) {
+    const from = new Date(patient.dateNaissance);
+    const to = patient.datePremiereConsult ? new Date(patient.datePremiereConsult) : new Date();
+    if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
+      ageYears = (to.getTime() - from.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    }
+  }
+
+  // DDM totals for encombrement
+  const ddmSup = ['dispSup1513','dispSup1211','dispSup2122','dispSup2325'].reduce((a, k) => { const v = p(k); return v !== null ? a + v : a; }, 0);
+  const ddmInf = ['dispInf4543','dispInf4241','dispInf3132','dispInf3335'].reduce((a, k) => { const v = p(k); return v !== null ? a + v : a; }, 0);
+  const necSup = [['t15','t14','t13'],['t12','t11'],['t21','t22'],['t23','t24','t25']].map(ks => ks.reduce((a,k) => a + (p(k) || 0), 0));
+  const necInf = [['t45','t44','t43'],['t42','t41'],['t31','t32'],['t33','t34','t35']].map(ks => ks.reduce((a,k) => a + (p(k) || 0), 0));
+  const dSKeys = ['dispSup1513','dispSup1211','dispSup2122','dispSup2325'];
+  const dIKeys = ['dispInf4543','dispInf4241','dispInf3132','dispInf3335'];
+  const totalDDMSup = dSKeys.every(k => p(k) !== null) && necSup.every(v => v > 0) ? dSKeys.reduce((a,k) => a + (p(k)||0), 0) - necSup.reduce((a,v) => a+v, 0) : null;
+  const totalDDMInf = dIKeys.every(k => p(k) !== null) && necInf.every(v => v > 0) ? dIKeys.reduce((a,k) => a + (p(k)||0), 0) - necInf.reduce((a,v) => a+v, 0) : null;
+
+  const under20 = ageYears !== null && ageYears < 20;
+  const under18 = ageYears !== null && ageYears < criteria.hg_age_max;
+
+  // ═══ AI ═══
+  const ai: InsuranceResult[] = [];
+
+  // 208 - Micromandibulie
+  if (anb !== null && snMego !== null) {
+    if (anb >= criteria.ai208_anb) {
+      ai.push({ code: '208', label: 'Micromandibulie', status: under20 ? 'eligible' : 'none', detail: `ANB=${anb}° ≥ ${criteria.ai208_anb}°` });
+    } else if (anb >= criteria.ai208_anb_combo && snMego >= criteria.ai208_snmego_combo) {
+      ai.push({ code: '208', label: 'Micromandibulie (combo)', status: under20 ? 'eligible' : 'none', detail: `ANB=${anb}° + SN-MeGo=${snMego}°` });
+    }
+  } else if (oj !== null && oj >= criteria.ai208_overjet_screen) {
+    const miss: string[] = [];
+    if (anb === null) miss.push('ANB');
+    if (snMego === null) miss.push('SN-MeGo');
+    ai.push({ code: '208', label: 'Micromandibulie?', status: 'missing', detail: `OJ=${oj}mm (screening ≥${criteria.ai208_overjet_screen}mm)`, missing: miss });
+  }
+
+  // 209 - Mordex apertus / clausus
+  if (anb !== null && snMego !== null) {
+    if (snMego >= criteria.ai209_snmego_open) {
+      ai.push({ code: '209', label: 'Mordex apertus', status: under20 ? 'eligible' : 'none', detail: `SN-MeGo=${snMego}° ≥ ${criteria.ai209_snmego_open}°` });
+    } else if (snMego >= criteria.ai209_snmego_open_combo && anb >= criteria.ai208_anb_combo) {
+      ai.push({ code: '209', label: 'Mordex apertus (combo)', status: under20 ? 'eligible' : 'none', detail: `SN-MeGo=${snMego}° + ANB=${anb}°` });
+    }
+    if (snMego <= criteria.ai209_snmego_deep) {
+      ai.push({ code: '209', label: 'Mordex clausus', status: under20 ? 'eligible' : 'none', detail: `SN-MeGo=${snMego}° ≤ ${criteria.ai209_snmego_deep}°` });
+    } else if (snMego <= criteria.ai209_snmego_deep_combo && anb >= criteria.ai208_anb_combo) {
+      ai.push({ code: '209', label: 'Mordex clausus (combo)', status: under20 ? 'eligible' : 'none', detail: `SN-MeGo=${snMego}° + ANB=${anb}°` });
+    }
+  }
+
+  // 210 - Prognathie inférieure
+  if (anb !== null) {
+    if (anb <= criteria.ai210_anb) {
+      ai.push({ code: '210', label: 'Prognathie inf.', status: under20 ? 'eligible' : 'none', detail: `ANB=${anb}° ≤ ${criteria.ai210_anb}°`, missing: s.hasXBiteAnt ? undefined : ['X-bite ant. (2 paires)'] });
+    } else if (anb <= criteria.ai210_anb_combo && snMego !== null && (snMego >= criteria.ai208_snmego_combo || snMego <= criteria.ai209_snmego_deep_combo)) {
+      ai.push({ code: '210', label: 'Prognathie inf. (combo)', status: under20 ? 'eligible' : 'none', detail: `ANB=${anb}° + SN-MeGo=${snMego}°` });
+    }
+  }
+
+  if (!under20 && ageYears !== null) {
+    ai.forEach(r => { if (r.status === 'none') r.detail += ' (> 20 ans)'; });
+  }
+
+  // ═══ LaMal ═══
+  const lamal: InsuranceResult[] = [];
+  // LaMal covers same congenital malformations as AI but after 20 years
+  if (ageYears !== null && ageYears >= 20) {
+    ai.forEach(r => {
+      if (r.status === 'none' || r.status === 'missing') {
+        lamal.push({ ...r, label: `${r.label} (art.19a)`, status: r.status === 'none' ? 'possible' : 'missing', detail: r.detail.replace(' (> 20 ans)', '') + ' — après 20 ans' });
+      }
+    });
+  }
+  // Dysgnathie causing functional problems
+  if (s.hasAtm) lamal.push({ code: '17f', label: 'Dysgnathie (ATM)', status: 'possible', detail: 'Désordres ATM déclarés' });
+
+  // ═══ HG ═══
+  const hg: InsuranceResult[] = [];
+  if (under18) {
+    if (oj !== null && oj >= criteria.hg_overjet && s.competenceLabiale === 'Incompétentes') {
+      hg.push({ code: 'OJ', label: 'Overjet sévère', status: 'eligible', detail: `OJ=${oj}mm + incompétence labiale` });
+    } else if (oj !== null && oj >= criteria.hg_overjet) {
+      hg.push({ code: 'OJ', label: 'Overjet sévère', status: 'possible', detail: `OJ=${oj}mm ≥ ${criteria.hg_overjet}mm`, missing: ['Interposition labiale?'] });
+    }
+    if (oj !== null && oj < 0) {
+      hg.push({ code: 'OJ-', label: 'Overjet négatif', status: 'eligible', detail: `OJ=${oj}mm` });
+    }
+    if (s.hasTraumatisant) {
+      hg.push({ code: 'OB', label: 'Supraclusion traumatisante', status: 'eligible', detail: 'Traumatisant déclaré' });
+    }
+    if (s.hasXBiteAnt || s.hasXSBitePost) {
+      hg.push({ code: 'XB', label: 'Occlusion croisée', status: 'eligible', detail: [s.hasXBiteAnt && 'Ant.', s.hasXSBitePost && 'Post.'].filter(Boolean).join(' + ') });
+    }
+    // Encombrement
+    const worstDDM = Math.min(totalDDMSup ?? 0, totalDDMInf ?? 0);
+    if ((totalDDMSup !== null || totalDDMInf !== null) && worstDDM <= -criteria.hg_encombrement) {
+      hg.push({ code: 'ENC', label: 'Encombrement sévère', status: 'eligible', detail: `DDM=${Math.round(worstDDM*10)/10}mm` });
+    }
+  }
+
+  // ═══ Complémentaire ═══
+  const complementaire: InsuranceResult[] = [];
+  if (patient.compOrtho) {
+    complementaire.push({ code: 'COMP', label: 'Assurance complémentaire', status: 'possible', detail: patient.compOrtho });
+  }
+
+  return { ai, lamal, hg, complementaire };
+}
 
 // ── Ceph norms ──
 const CEPH_NORMS: Record<string, { ideal: number; dev: number; label: string }> = {
@@ -108,6 +232,7 @@ const DDMCell = ({ v }: { v: number | null }) => {
 export default function OverviewTab() {
   const patient = useStore(state => state.patient);
   const setActiveTab = useStore(state => state.setActiveTab);
+  const criteria = useStore(state => state.settings.insuranceCriteria);
   const s = patient.sessions.find(s => s.id === patient.activeSessionId) || patient.sessions[0];
 
   if (!s) return <div className="text-muted text-center">Aucune session</div>;
@@ -249,8 +374,18 @@ export default function OverviewTab() {
     patient.hasAutreDent && { label: 'Autre Dent.', detail: patient.autreDent },
   ].filter(Boolean) as { label: string; detail?: string }[];
 
+  // Insurance analysis
+  const insurance = criteria ? analyzeInsurance(patient, s, criteria) : { ai: [], lamal: [], hg: [], complementaire: [] };
+  const allInsurance = [...insurance.ai, ...insurance.lamal, ...insurance.hg, ...insurance.complementaire];
+  const hasEligible = allInsurance.some(r => r.status === 'eligible');
+  const hasPossible = allInsurance.some(r => r.status === 'possible');
+  const hasMissing = allInsurance.some(r => r.status === 'missing');
+
   // Treatment plans
-  const plans = [s.planTraitement1, s.planTraitement2, s.planTraitement3, s.planTraitement4, s.planTraitement5, s.planTraitement6].filter(Boolean);
+  const plans = [s.planTraitement1, s.planTraitement2, s.planTraitement3, s.planTraitement4, s.planTraitement5]
+    .map((p, i) => p ? { num: i + 1, text: p } : null)
+    .filter(Boolean) as { num: number; text: string }[];
+  const remarques = s.planTraitement6 || '';
 
   return (
     <div className="overview-grid">
@@ -270,10 +405,59 @@ export default function OverviewTab() {
                 {patient.praticien && <span><b>Prat :</b> {patient.praticien}</span>}
               </div>
             </div>
-            <span className="ov-pill ov-pill-muted" style={{ alignSelf: 'center', marginLeft: 'auto' }}>{patient.id}</span>
+            <div style={{ alignSelf: 'center', marginLeft: 'auto', display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
+              <button
+                className="btn btn-outline no-print"
+                onClick={(e) => { e.stopPropagation(); window.print(); }}
+                style={{ padding: '2px 8px', fontSize: 'var(--fs-small)', cursor: 'pointer' }}
+                title="Exporter PDF (Ctrl+P)"
+              >
+                PDF
+              </button>
+              <span className="ov-pill ov-pill-muted">{patient.id}</span>
+            </div>
           </div>
         );
       })()}
+
+      {/* ═══ INSURANCE ZONE ═══ */}
+      {allInsurance.length > 0 && (
+        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 'var(--sp-2)', padding: 'var(--sp-2) var(--sp-3)', background: hasEligible ? '#f0fdf4' : hasMissing ? '#fffbeb' : '#f8fafc', border: `1px solid ${hasEligible ? '#bbf7d0' : hasMissing ? '#fde68a' : 'var(--c-border)'}`, borderRadius: 'var(--radius-lg)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: 'var(--fs-small)', color: 'var(--c-text-secondary)', marginRight: 'var(--sp-1)' }}>Prise en charge :</span>
+          {insurance.ai.map((r, i) => (
+            <span key={`ai-${i}`} title={r.detail + (r.missing ? ' — Manquant: ' + r.missing.join(', ') : '')}
+              className={`ov-pill ${r.status === 'eligible' ? 'ov-pill-green' : r.status === 'missing' ? 'ov-pill-amber' : 'ov-pill-muted'}`}
+              style={{ fontSize: 'var(--fs-badge)' }}>
+              AI {r.code} {r.status === 'missing' && '⚠'}
+            </span>
+          ))}
+          {insurance.lamal.map((r, i) => (
+            <span key={`lamal-${i}`} title={r.detail}
+              className={`ov-pill ${r.status === 'possible' ? 'ov-pill-blue' : r.status === 'missing' ? 'ov-pill-amber' : 'ov-pill-muted'}`}
+              style={{ fontSize: 'var(--fs-badge)' }}>
+              LaMal {r.status === 'missing' && '⚠'}
+            </span>
+          ))}
+          {insurance.hg.map((r, i) => (
+            <span key={`hg-${i}`} title={r.detail + (r.missing ? ' — ' + r.missing.join(', ') : '')}
+              className={`ov-pill ${r.status === 'eligible' ? 'ov-pill-green' : r.status === 'possible' ? 'ov-pill-blue' : 'ov-pill-amber'}`}
+              style={{ fontSize: 'var(--fs-badge)' }}>
+              HG {r.code} {r.status !== 'eligible' && '?'}
+            </span>
+          ))}
+          {insurance.complementaire.map((r, i) => (
+            <span key={`comp-${i}`} title={r.detail}
+              className="ov-pill ov-pill-blue" style={{ fontSize: 'var(--fs-badge)' }}>
+              Comp.
+            </span>
+          ))}
+          {hasMissing && (
+            <span style={{ fontSize: 'var(--fs-badge)', color: '#92400e', fontStyle: 'italic', marginLeft: 'auto' }}>
+              Données manquantes — survolez pour détails
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ═══ ROW 2: EXTRA-ORAL | INTRA-ORAL | CEPH ═══ */}
 
@@ -394,9 +578,9 @@ export default function OverviewTab() {
       <div className="overview-zone" onClick={() => setActiveTab('radio')} title="→ Analyse Radio">
         <div className="overview-zone-title">Céphalométrie</div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-1)' }}>
-          {s.stadeMaturation && <span className="ov-pill ov-pill-blue" style={{ fontSize: 'var(--fs-badge)' }}>{s.stadeMaturation}</span>}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-1)' }}>
           <div className="ov-sub-title" style={{ margin: 0, paddingBottom: 0, border: 'none' }}>Sagittal</div>
+          {s.stadeMaturation && <span className="ov-pill ov-pill-blue" style={{ fontSize: 'var(--fs-badge)' }}>{s.stadeMaturation}</span>}
         </div>
         <table className="ov-ceph-table">
           <tbody>
@@ -452,79 +636,101 @@ export default function OverviewTab() {
       <div className="overview-zone" onClick={() => setActiveTab('moulages')} title="→ Moulages">
         <div className="overview-zone-title">Moulage</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-2)' }}>
-          {/* DDM quadrant table */}
+        {/* DDM full width */}
+        <div className="ov-sub-title">DDM (Bilan de Place)</div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-small)', tableLayout: 'fixed' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
+              <th style={{ width: '28px', padding: '2px 3px' }}></th>
+              <th style={{ padding: '2px 3px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 600, fontSize: 'var(--fs-badge)' }}>15-13</th>
+              <th style={{ padding: '2px 3px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 600, fontSize: 'var(--fs-badge)' }}>12-11</th>
+              <th style={{ padding: '2px 3px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 600, fontSize: 'var(--fs-badge)' }}>21-22</th>
+              <th style={{ padding: '2px 3px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 600, fontSize: 'var(--fs-badge)' }}>23-25</th>
+              <th style={{ padding: '2px 3px', textAlign: 'center', fontWeight: 700, borderLeft: '2px solid var(--c-border)', fontSize: 'var(--fs-badge)' }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid var(--c-border)', background: '#f8fafc' }}>
+              <td style={{ padding: '3px', fontWeight: 700, color: '#1e40af' }}>Sup</td>
+              {ddmSupQ.map((v,i) => <DDMCell key={i} v={v} />)}
+              <td style={{ borderLeft: '2px solid var(--c-border)', textAlign: 'center', fontWeight: 700, color: ddmSupTotal === null ? '#94a3b8' : ddmSupTotal < 0 ? 'var(--c-alert)' : 'var(--c-filled)', padding: '3px' }}>
+                {ddmSupTotal !== null ? (ddmSupTotal > 0 ? `+${ddmSupTotal}` : ddmSupTotal) : '—'}
+              </td>
+            </tr>
+            <tr style={{ background: '#f8fafc' }}>
+              <td style={{ padding: '3px', fontWeight: 700, color: '#1e40af' }}>Inf</td>
+              {ddmInfQ.map((v,i) => <DDMCell key={i} v={v} />)}
+              <td style={{ borderLeft: '2px solid var(--c-border)', textAlign: 'center', fontWeight: 700, color: ddmInfTotal === null ? '#94a3b8' : ddmInfTotal < 0 ? 'var(--c-alert)' : 'var(--c-filled)', padding: '3px' }}>
+                {ddmInfTotal !== null ? (ddmInfTotal > 0 ? `+${ddmInfTotal}` : ddmInfTotal) : '—'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <hr className="ov-sep" />
+
+        {/* Bolton + Distances side by side */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 'var(--sp-2)', alignItems: 'start' }}>
+          {/* Bolton */}
           <div>
-            <div className="ov-sub-title">DDM</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-badge)' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
-                  <th style={{ padding: '1px 2px', textAlign: 'left', color: 'var(--c-text-muted)', fontWeight: 500 }}></th>
-                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>15-13</th>
-                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>12-11</th>
-                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>21-22</th>
-                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>23-25</th>
-                  <th style={{ padding: '1px 2px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid var(--c-border)' }}>Tot.</th>
-                </tr>
-              </thead>
+            <div className="ov-sub-title">Bolton</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-small)' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
-                  <td style={{ padding: '1px 2px', fontWeight: 700, color: '#1e40af', fontSize: 'var(--fs-badge)' }}>Sup</td>
-                  {ddmSupQ.map((v,i) => <DDMCell key={i} v={v} />)}
-                  <td style={{ borderLeft: '1px solid var(--c-border)', textAlign: 'center', fontWeight: 700, fontSize: 'var(--fs-badge)', color: ddmSupTotal === null ? '#94a3b8' : ddmSupTotal < 0 ? 'var(--c-alert)' : 'var(--c-filled)', padding: '1px 2px' }}>
-                    {ddmSupTotal !== null ? (ddmSupTotal > 0 ? `+${ddmSupTotal}` : ddmSupTotal) : '—'}
+                  <td style={{ padding: '2px 4px', fontWeight: 600, color: 'var(--c-text-secondary)', width: '24px' }}>/6</td>
+                  <td style={{ padding: '2px 4px', textAlign: 'right' }}>
+                    <span className={hasInc ? (bolton6Excess > 0 ? 'ov-warn ov-warn-bg' : 'ov-ok') : 'ov-empty'} style={{ fontWeight: 600 }}>
+                      {hasInc ? (bolton6Excess > 0 ? `${ratio6 > 0.772 ? 'mand.' : 'max.'} +${bolton6Excess}` : 'OK') : '—'}
+                    </span>
                   </td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '1px 2px', fontWeight: 700, color: '#1e40af', fontSize: 'var(--fs-badge)' }}>Inf</td>
-                  {ddmInfQ.map((v,i) => <DDMCell key={i} v={v} />)}
-                  <td style={{ borderLeft: '1px solid var(--c-border)', textAlign: 'center', fontWeight: 700, fontSize: 'var(--fs-badge)', color: ddmInfTotal === null ? '#94a3b8' : ddmInfTotal < 0 ? 'var(--c-alert)' : 'var(--c-filled)', padding: '1px 2px' }}>
-                    {ddmInfTotal !== null ? (ddmInfTotal > 0 ? `+${ddmInfTotal}` : ddmInfTotal) : '—'}
+                  <td style={{ padding: '2px 4px', fontWeight: 600, color: 'var(--c-text-secondary)' }}>/12</td>
+                  <td style={{ padding: '2px 4px', textAlign: 'right' }}>
+                    <span className={allTeeth ? (bolton12Excess > 0 ? 'ov-warn ov-warn-bg' : 'ov-ok') : 'ov-empty'} style={{ fontWeight: 600 }}>
+                      {allTeeth ? (bolton12Excess > 0 ? `${ratio12 > 0.913 ? 'mand.' : 'max.'} +${bolton12Excess}` : 'OK') : '—'}
+                    </span>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          {/* Bolton */}
+          <div className="v-divider" />
+
+          {/* Distances */}
           <div>
-            <div className="ov-sub-title">Bolton</div>
-            <div className="ov-kv">
-              <span className="ov-label">/6</span>
-              <span className={`ov-val ${hasInc ? (bolton6Excess > 0 ? 'ov-warn' : 'ov-ok') : 'ov-empty'}`}>
-                {hasInc ? (bolton6Excess > 0
-                  ? `Excès ${ratio6 > 0.772 ? 'mand.' : 'max.'} +${bolton6Excess} mm`
-                  : 'Harmonieux') : '—'}
-              </span>
-              <span className="ov-label">/12</span>
-              <span className={`ov-val ${allTeeth ? (bolton12Excess > 0 ? 'ov-warn' : 'ov-ok') : 'ov-empty'}`}>
-                {allTeeth ? (bolton12Excess > 0
-                  ? `Excès ${ratio12 > 0.913 ? 'mand.' : 'max.'} +${bolton12Excess} mm`
-                  : 'Harmonieux') : '—'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <hr className="ov-sep" />
-
-        {/* Distances */}
-        <div className="ov-sub-title">Distances</div>
-        <div style={{ fontSize: 'var(--fs-small)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', gap: '1px var(--sp-1)', textAlign: 'right' }}>
-            <span></span><span className="ov-label" style={{ textAlign: 'center' }}>Sup</span><span className="ov-label" style={{ textAlign: 'center' }}>Inf</span><span className="ov-label" style={{ textAlign: 'center' }}>Δ</span>
-            <span className="ov-label">Mol</span>
-            <span>{n(s,'distInterMolSup') || '—'}</span>
-            <span>{n(s,'distInterMolInf') || '—'}</span>
-            <DeltaColor v={distMolDelta} />
-            <span className="ov-label">PM</span>
-            <span>{n(s,'distPMSup') || '—'}</span>
-            <span>{n(s,'distPMInf') || '—'}</span>
-            <DeltaColor v={distPMDelta} />
-            <span className="ov-label">Can</span>
-            <span>{n(s,'distCanSup') || '—'}</span>
-            <span>{n(s,'distCanInf') || '—'}</span>
-            <DeltaColor v={distCanDelta} />
+            <div className="ov-sub-title">Distances</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-small)', textAlign: 'center' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
+                  <th style={{ width: '28px', padding: '1px 2px' }}></th>
+                  <th style={{ padding: '1px 2px', fontWeight: 600, color: 'var(--c-text-muted)', fontSize: 'var(--fs-badge)' }}>Sup</th>
+                  <th style={{ padding: '1px 2px', fontWeight: 600, color: 'var(--c-text-muted)', fontSize: 'var(--fs-badge)' }}>Inf</th>
+                  <th style={{ padding: '1px 2px', fontWeight: 600, color: 'var(--c-text-muted)', fontSize: 'var(--fs-badge)' }}>Δ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid var(--c-border-light)' }}>
+                  <td style={{ padding: '2px', fontWeight: 600, color: 'var(--c-text-secondary)', textAlign: 'left' }}>Mol</td>
+                  <td style={{ padding: '2px' }}>{n(s,'distInterMolSup') || '—'}</td>
+                  <td style={{ padding: '2px' }}>{n(s,'distInterMolInf') || '—'}</td>
+                  <td style={{ padding: '2px' }}><DeltaColor v={distMolDelta} /></td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid var(--c-border-light)' }}>
+                  <td style={{ padding: '2px', fontWeight: 600, color: 'var(--c-text-secondary)', textAlign: 'left' }}>PM</td>
+                  <td style={{ padding: '2px' }}>{n(s,'distPMSup') || '—'}</td>
+                  <td style={{ padding: '2px' }}>{n(s,'distPMInf') || '—'}</td>
+                  <td style={{ padding: '2px' }}><DeltaColor v={distPMDelta} /></td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '2px', fontWeight: 600, color: 'var(--c-text-secondary)', textAlign: 'left' }}>Can</td>
+                  <td style={{ padding: '2px' }}>{n(s,'distCanSup') || '—'}</td>
+                  <td style={{ padding: '2px' }}>{n(s,'distCanInf') || '—'}</td>
+                  <td style={{ padding: '2px' }}><DeltaColor v={distCanDelta} /></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -560,10 +766,10 @@ export default function OverviewTab() {
             return (
               <div className="ov-kv">
                 {withComment.map(o => (
-                  <><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">{o.detail}</span></>
+                  <span key={o.label} style={{ display: 'contents' }}><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">{o.detail}</span></span>
                 ))}
                 {withIssue.map(o => (
-                  <><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">—</span></>
+                  <span key={o.label} style={{ display: 'contents' }}><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">—</span></span>
                 ))}
               </div>
             );
@@ -607,16 +813,21 @@ export default function OverviewTab() {
       </div>
 
       {/* ═══ ROW 4: TREATMENT PLAN ═══ */}
-      {plans.length > 0 && (
-        <div className="overview-zone overview-footer">
+      {(plans.length > 0 || remarques) && (
+        <div className="overview-zone overview-footer" onClick={() => setActiveTab('traitement')} title="→ Plan de Traitement">
           <div className="overview-zone-title">Plan de Traitement</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--sp-1) var(--sp-3)', fontSize: 'var(--fs-small)' }}>
-            {plans.map((p, i) => (
-              <div key={i} style={{ display: 'flex', gap: 'var(--sp-1)' }}>
-                <span style={{ fontWeight: 700, color: 'var(--c-primary)', minWidth: '16px' }}>{i + 1}.</span>
-                <span>{p}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: 'var(--fs-small)' }}>
+            {plans.map(p => (
+              <div key={p.num} style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'baseline' }}>
+                <span style={{ fontWeight: 700, color: 'var(--c-primary)', minWidth: '18px', textAlign: 'right' }}>{p.num}.</span>
+                <span>{p.text}</span>
               </div>
             ))}
+            {remarques && (
+              <div style={{ marginTop: 'var(--sp-1)', paddingTop: 'var(--sp-1)', borderTop: '1px solid var(--c-border)', color: 'var(--c-text-secondary)', fontStyle: 'italic' }}>
+                {remarques}
+              </div>
+            )}
           </div>
         </div>
       )}

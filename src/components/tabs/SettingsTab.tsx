@@ -165,6 +165,73 @@ export default function SettingsTab() {
         </div>
       </div>
 
+      {/* ═══ Insurance Criteria ═══ */}
+      <div className="card" style={{ padding: '1rem', marginTop: '1rem' }}>
+        <h3 style={{ marginBottom: '0.5rem' }}>Critères de Prise en Charge (Assurances)</h3>
+        <p style={{ fontSize: 'var(--fs-small)', color: '#64748b', marginBottom: '1rem' }}>
+          Paramètres céphalométriques et cliniques déclenchant les alertes dans l'overview.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+          {/* AI */}
+          <div className="section-card" style={{ padding: 'var(--sp-2)' }}>
+            <h4 className="section-title" style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>AI (Infirmités congénitales)</h4>
+            {([
+              ['ai208_anb', '208 ANB ≥', '°'],
+              ['ai208_anb_combo', '208 ANB combo ≥', '°'],
+              ['ai208_snmego_combo', '208 SN-MeGo combo ≥', '°'],
+              ['ai208_overjet_screen', '208 OJ screening ≥', 'mm'],
+              ['ai209_snmego_open', '209 Apertus SN-MeGo ≥', '°'],
+              ['ai209_snmego_open_combo', '209 Apertus combo ≥', '°'],
+              ['ai209_snmego_deep', '209 Clausus SN-MeGo ≤', '°'],
+              ['ai209_snmego_deep_combo', '209 Clausus combo ≤', '°'],
+              ['ai210_anb', '210 Progn. ANB ≤', '°'],
+              ['ai210_anb_combo', '210 Progn. combo ≤', '°'],
+            ] as const).map(([key, label, unit]) => (
+              <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                <label style={{ fontSize: 'var(--fs-badge)', fontWeight: 500, margin: 0 }}>{label}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <input type="number" value={(settings.insuranceCriteria as any)[key]} onChange={e => updateSettings({ insuranceCriteria: { ...settings.insuranceCriteria, [key]: parseFloat(e.target.value) || 0 } })} style={{ width: '50px', textAlign: 'center', padding: '2px', fontSize: 'var(--fs-badge)' }} step="0.5" />
+                  <span style={{ fontSize: 'var(--fs-badge)', color: '#64748b' }}>{unit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* HG */}
+          <div className="section-card" style={{ padding: 'var(--sp-2)' }}>
+            <h4 className="section-title" style={{ background: '#eff6ff', color: '#1e40af', borderColor: '#bfdbfe' }}>HG (Hospice Général)</h4>
+            {([
+              ['hg_overjet', 'Overjet ≥', 'mm'],
+              ['hg_overbite_open_teeth', 'Béance > N dents', ''],
+              ['hg_encombrement', 'Encombrement ≥', 'mm'],
+              ['hg_age_max', 'Âge max', 'ans'],
+            ] as const).map(([key, label, unit]) => (
+              <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                <label style={{ fontSize: 'var(--fs-badge)', fontWeight: 500, margin: 0 }}>{label}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <input type="number" value={(settings.insuranceCriteria as any)[key]} onChange={e => updateSettings({ insuranceCriteria: { ...settings.insuranceCriteria, [key]: parseFloat(e.target.value) || 0 } })} style={{ width: '50px', textAlign: 'center', padding: '2px', fontSize: 'var(--fs-badge)' }} step="1" />
+                  <span style={{ fontSize: 'var(--fs-badge)', color: '#64748b' }}>{unit}</span>
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: 'var(--sp-2)', fontSize: 'var(--fs-badge)', color: '#64748b' }}>
+              Critères additionnels détectés automatiquement : OJ négatif, supraclusion traumatisante, occlusion croisée.
+            </div>
+          </div>
+
+          {/* LaMal + Info */}
+          <div className="section-card" style={{ padding: 'var(--sp-2)' }}>
+            <h4 className="section-title" style={{ background: '#faf5ff', color: '#6b21a8', borderColor: '#e9d5ff' }}>LaMal / Complémentaire</h4>
+            <div style={{ fontSize: 'var(--fs-small)', color: '#475569', lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 var(--sp-2)' }}><b>LaMal art.19a :</b> Mêmes critères AI appliqués aux patients &gt; 20 ans (infirmités congénitales).</p>
+              <p style={{ margin: '0 0 var(--sp-2)' }}><b>LaMal art.17f :</b> Dysgnathie avec troubles fonctionnels (apnée, déglutition, ATM). Détection auto si ATM cochée.</p>
+              <p style={{ margin: 0 }}><b>Complémentaire :</b> Affichée si le champ "Assurance Complémentaire" est rempli dans Informations.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
