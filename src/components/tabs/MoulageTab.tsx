@@ -203,7 +203,7 @@ export default function MoulageTab() {
           <h3>Espace Disponible</h3>
           <span className={`completion-badge ${['dispSup1513','dispSup1211','dispSup2122','dispSup2325','dispInf4543','dispInf4241','dispInf3132','dispInf3335'].every(k=>n(k)>0) ? 'complete' : ''}`}>{['dispSup1513','dispSup1211','dispSup2122','dispSup2325','dispInf4543','dispInf4241','dispInf3132','dispInf3335'].filter(k=>n(k)>0).length}/8</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.5rem' }}>
+        <div className="espace-dispo-grid">
           <Input label="15-13" name="dispSup1513" />
           <Input label="12-11" name="dispSup1211" />
           <Input label="21-22" name="dispSup2122" />

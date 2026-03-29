@@ -769,6 +769,12 @@ input.field-empty {
   align-items: flex-start;
 }
 
+.espace-dispo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
+
 /* ══ RESPONSIVE ══ */
 @media (max-width: 1024px) {
   .grid-2 { grid-template-columns: 1fr; }
@@ -778,6 +784,9 @@ input.field-empty {
   }
   .intra-oral-grid .v-divider {
     display: none;
+  }
+  .espace-dispo-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

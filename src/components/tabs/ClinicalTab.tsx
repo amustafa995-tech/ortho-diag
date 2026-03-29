@@ -121,7 +121,7 @@ export default function ClinicalTab() {
           <div className="v-divider" />
 
           {/* VERTICAL + TRANSVERSAL */}
-          <div className="flex-col gap-1">
+          <div className="flex-col gap-3">
             <div className="section-card">
               <h4 className="section-title">Vertical</h4>
               <div className="flex-row flex-wrap" style={{ marginBottom: 'var(--sp-1)' }}>

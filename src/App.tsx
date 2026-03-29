@@ -182,8 +182,8 @@ export default function App() {
             <span style={{ fontSize: 'var(--fs-badge)', fontWeight: 700, color: completionScore === 100 ? 'var(--c-filled)' : completionScore > 50 ? 'var(--c-primary)' : 'var(--c-text-muted)' }}>{completionScore}%</span>
           </div>
           <div style={{ display: 'flex', gap: '2px', height: '4px' }}>
-            {tabs.map(tab => {
-              const isDone = tab.badge === 'ok' || (tab.id === 'documents' && tab.badge !== '0');
+            {tabs.filter(tab => tab.id !== 'documents').map(tab => {
+              const isDone = tab.badge === 'ok';
               const isPartial = tab.badge !== '0' && tab.badge !== 'ok';
               return (
                 <div key={tab.id} style={{ flex: 1, borderRadius: '2px', background: isDone ? tab.color : isPartial ? tab.color : 'var(--c-border)', opacity: isDone ? 1 : isPartial ? 0.4 : 0.2, transition: 'opacity 0.3s, background 0.3s' }} title={tab.label} />
