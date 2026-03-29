@@ -140,9 +140,23 @@ export const useStore = create<OrthoDiagState>()(
         };
       }),
 
-      importPatientData: (data) => set((state) => ({
-        patient: { ...state.patient, ...data }
-      })),
+      importPatientData: (data) => set(() => {
+        // Full reset to initialPatient defaults, then overlay loaded data
+        const merged: PatientRecord = { ...initialPatient, ...data };
+        // Deep-merge nested objects
+        merged.maladiesChroniques = { ...initialPatient.maladiesChroniques, ...(data.maladiesChroniques || {}) };
+        merged.maladiesChroniquesDetails = { ...initialPatient.maladiesChroniquesDetails, ...(data.maladiesChroniquesDetails || {}) };
+        merged.mauvaisesHabitudes = { ...initialPatient.mauvaisesHabitudes, ...(data.mauvaisesHabitudes || {}) };
+        // Deep-merge each session with initialSession defaults
+        if (data.sessions && Array.isArray(data.sessions)) {
+          merged.sessions = data.sessions.map((s: any) => ({ ...initialSession, ...s }));
+        }
+        // Ensure documents array exists
+        if (!Array.isArray(merged.documents)) {
+          merged.documents = [];
+        }
+        return { patient: merged };
+      }),
 
       setActiveSession: (sessionId) => set((state) => ({
         patient: { ...state.patient, activeSessionId: sessionId }

@@ -110,6 +110,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setActiveTab, forceSave]);
 
+  // Reset lastSavedRef when switching patients
+  useEffect(() => {
+    if (patientDirectory) {
+      lastSavedRef.current = '';
+    }
+  }, [patientDirectory]);
+
   // Auto-save with dirty check
   useEffect(() => {
     if (isHubConnected && patientDirectory && patient) {
@@ -124,6 +131,17 @@ export default function App() {
       return () => clearTimeout(timeout);
     }
   }, [patient, isHubConnected, patientDirectory]);
+
+  // Save before closing the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isHubConnected && patientDirectory) {
+        fileSystem.savePatientData(patientDirectory, patient).catch(() => {});
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isHubConnected, patientDirectory, patient]);
 
   let ageCalcule = "";
   if (patient.dateNaissance) {
@@ -161,7 +179,7 @@ export default function App() {
       <aside className="sidebar no-print">
         <div className="sidebar-header">
           <h1 className="sidebar-brand">OrthoDiag</h1>
-          <button className="btn-back" onClick={() => { setPatientDirectory(null); setActiveTab('overview'); }}>
+          <button className="btn-back" onClick={() => { forceSave(); setPatientDirectory(null); setActiveTab('overview'); }}>
             ← Changer de Dossier
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useStore } from '../../store/useStore';
+import { useStore, initialSession } from '../../store/useStore';
 import { fileSystem } from '../../services/FileSystemService';
 import type { PatientDirectory } from '../../services/FileSystemService';
 
@@ -108,12 +108,32 @@ export default function PatientHub() {
 
       const handle = await fileSystem.createPatientDirectory(folderName);
 
+      const newSession = {
+        ...initialSession,
+        id: 'T0',
+        date: new Date().toISOString().split('T')[0],
+        nomSession: 'Bilan Initial (T0)',
+      };
       const emptyPatient = {
         id: 'P' + Date.now().toString().slice(-6),
         nom: newPatientNom.trim().toUpperCase(),
         prenom: newPatientPrenom.trim(),
+        pratique: '', sexe: '', dateNaissance: '', datePremiereConsult: '', age: '',
+        avs: '', compOrtho: '', caisseMaladie: '', numGarantie: '', adresse: '', npaLocalite: '',
+        telephone: '', email: '', representantLegal: '',
+        medecinTraitant: '', medecinDentaire: '', autreInfo: '',
+        maladiesChroniques: { diabete: false, hypertension: false, allergies: false, cardio: false, respi: false, neuro: false },
+        maladiesChroniquesDetails: { diabete: '', hypertension: '', allergies: '', cardio: '', respi: '', neuro: '' },
+        mauvaisesHabitudes: { succionPouce: false, bruxisme: false, rongerOngles: false, respiBuccale: false },
+        hasChirurgies: false, chirurgiesAnterieures: '', hasTraitements: false, traitementsCours: '',
+        allergiesMedic: '', hasAutreGen: false, autreGen: '',
+        antecFamExtract: false, extractionDetails: '', carieRecurrente: false, sensibilite: false,
+        hasOrthoPasse: false, traitementsOrthoPasses: '', hasAutreDent: false, autreDent: '', autreAntecDent: '',
+        hasFente: false, hasMacroglossie: false, hasSAOS: false, hasTroublesDeglutitionGrave: false, hasAsymetrieGrave: false, has17d: false,
+        motifConsultation: '', praticien: '', dention: '', implant: '', implantDent: '',
+        documents: [],
+        sessions: [newSession],
         activeSessionId: 'T0',
-        sessions: [{ id: 'T0', date: new Date().toISOString(), nomSession: 'Bilan Initial' }]
       };
 
       await fileSystem.savePatientData(handle, emptyPatient as any);
