@@ -36,8 +36,8 @@ export default function ClinicalTab() {
   const intraOralDone = intraOralFields.filter(f => !!(activeSession as any)[f]).length;
 
   return (
-    <div className="module-content">
-      <div className="module-header"><h2>3. Analyse Clinique</h2></div>
+    <div className="module-content tab-clin">
+      <div className="module-header mh-clin"><h2>3. Analyse Clinique</h2></div>
 
       {/* ═══ EXTRA-ORAL ═══ */}
       <div className="card">
@@ -97,9 +97,9 @@ export default function ClinicalTab() {
           <span className={`completion-badge ${intraOralDone === intraOralFields.length ? 'complete' : ''}`}>{intraOralDone}/{intraOralFields.length}</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,3fr) auto minmax(0,2fr)', gap: 'var(--sp-3)', alignItems: 'flex-start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) auto minmax(0,2fr)', gap: 'var(--sp-3)', alignItems: 'flex-start' }}>
           {/* SAGITTAL */}
-          <div>
+          <div className="section-card">
             <h4 className="section-title">Sagittal</h4>
             <div className="flex-row" style={{ marginBottom: 'var(--sp-2)' }}>
               <InlineMetric label="Overjet" name="overjet" ti={200} />
@@ -116,8 +116,8 @@ export default function ClinicalTab() {
           <div className="v-divider" />
 
           {/* VERTICAL + TRANSVERSAL */}
-          <div className="flex-col">
-            <div style={{ borderBottom: '1px solid var(--c-border)', paddingBottom: 'var(--sp-2)' }}>
+          <div className="flex-col gap-1">
+            <div className="section-card">
               <h4 className="section-title">Vertical</h4>
               <div className="flex-row flex-wrap" style={{ marginBottom: 'var(--sp-1)' }}>
                 <InlineMetric label="Overbite" name="overbite" ti={220} />
@@ -130,11 +130,32 @@ export default function ClinicalTab() {
               </div>
             </div>
 
-            <div>
+            <div className="section-card">
               <h4 className="section-title">Transversal</h4>
-              <div className="flex-col gap-1">
-                <TwoWayCheck label="Ligne Médiane (LM)" name="lm" options={["Centré", "Dévié"]} detailOption="Dévié" detailName="lmDetails" ti={240} />
-                <ClinicalToggle label="X/S Bite post." stateField="hasXSBitePost" detailField="xsbitePostDent" ti={243} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'var(--sp-1) var(--sp-2)', alignItems: 'center', marginTop: 'var(--sp-1)' }}>
+                {/* LM row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+                  <span style={{ fontSize: 'var(--fs-value)', fontWeight: 600, color: 'var(--c-text-secondary)', minWidth: '22px' }}>LM</span>
+                  {(['Centré','Dévié'] as const).map((opt, idx) => (
+                    <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0 }}>
+                      <input type="checkbox" checked={activeSession.lm === opt} tabIndex={240 + idx} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'lm', e.target.checked ? opt : '')} style={{ margin: 0 }} />
+                      {opt}
+                    </label>
+                  ))}
+                </div>
+                {activeSession.lm === 'Dévié'
+                  ? <input type="text" name="lmDetails" value={activeSession.lmDetails || ''} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'lmDetails', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
+                  : <span />
+                }
+                {/* X/S Bite row */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: 'var(--fs-value)', fontWeight: 500, margin: 0 }}>
+                  <input type="checkbox" name="hasXSBitePost" checked={!!activeSession.hasXSBitePost} tabIndex={243} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'hasXSBitePost', e.target.checked)} style={{ margin: 0 }} />
+                  X/S Bite post.
+                </label>
+                {activeSession.hasXSBitePost
+                  ? <input type="text" name="xsbitePostDent" value={activeSession.xsbitePostDent || ''} onChange={e => useStore.getState().updateSessionField(activeSessionId, 'xsbitePostDent', e.target.value)} placeholder="Précisez..." className="detail-fade" style={{ padding: '2px var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)' }} />
+                  : <span />
+                }
               </div>
             </div>
           </div>
@@ -159,10 +180,12 @@ export default function ClinicalTab() {
 
         <div className="card">
           <div className="card-header"><h3>Habitudes</h3></div>
-          <div className="grid-2 gap-1">
-            <Checkbox label="Déglu. atypique" name="hasDeglutitionAtypique" ti={310} />
-            <Checkbox label="Interpo. Labiale" name="hasInterpoLabial" ti={312} />
-            <Checkbox label="Grincage de dents" name="hasRincageDents" ti={314} />
+          <div className="flex-col gap-1">
+            <div className="flex-row gap-3 flex-wrap">
+              <Checkbox label="Déglu. atypique" name="hasDeglutitionAtypique" ti={310} />
+              <Checkbox label="Interpo. Labiale" name="hasInterpoLabial" ti={312} />
+              <Checkbox label="Grincage de dents" name="hasRincageDents" ti={314} />
+            </div>
             <ClinicalToggle label="Désordres ATM" stateField="hasAtm" detailField="atmDetails" ti={316} />
           </div>
         </div>

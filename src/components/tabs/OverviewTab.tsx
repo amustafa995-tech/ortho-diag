@@ -94,6 +94,17 @@ function KV({ label, field, val, suffix, noGreen }: { label: string; field?: str
   );
 }
 
+// ── DDM cell helper ──
+const DDMCell = ({ v }: { v: number | null }) => {
+  if (v === null) return <td style={{ textAlign: 'center', color: '#94a3b8', padding: '1px 2px', fontSize: 'var(--fs-badge)' }}>—</td>;
+  const color = v < 0 ? 'var(--c-alert)' : v > 0 ? 'var(--c-filled)' : '#64748b';
+  return (
+    <td style={{ textAlign: 'center', fontWeight: 700, color, padding: '1px 2px', fontSize: 'var(--fs-badge)', whiteSpace: 'nowrap' }}>
+      {v > 0 ? '+' : ''}{v}
+    </td>
+  );
+};
+
 export default function OverviewTab() {
   const patient = useStore(state => state.patient);
   const setActiveTab = useStore(state => state.setActiveTab);
@@ -115,36 +126,28 @@ export default function OverviewTab() {
   }
 
   // Bolton
-  const incMax = [n(s,'t12'),n(s,'t11'),n(s,'t21'),n(s,'t22')];
-  const incMand = [n(s,'t42'),n(s,'t41'),n(s,'t31'),n(s,'t32')];
-  const sumMax6 = n(s,'t13')+n(s,'t12')+n(s,'t11')+n(s,'t21')+n(s,'t22')+n(s,'t23');
-  const sumMand6 = n(s,'t43')+n(s,'t42')+n(s,'t41')+n(s,'t31')+n(s,'t32')+n(s,'t33');
   const maxKeys = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26'];
   const mandKeys = ['t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
+  const sumMax6 = n(s,'t13')+n(s,'t12')+n(s,'t11')+n(s,'t21')+n(s,'t22')+n(s,'t23');
+  const sumMand6 = n(s,'t43')+n(s,'t42')+n(s,'t41')+n(s,'t31')+n(s,'t32')+n(s,'t33');
   const sumMax12 = maxKeys.reduce((a,k) => a + n(s,k), 0);
   const sumMand12 = mandKeys.reduce((a,k) => a + n(s,k), 0);
-  const hasInc = [...incMax,...incMand].some(v => v > 0);
+  const hasInc = [n(s,'t12'),n(s,'t11'),n(s,'t21'),n(s,'t22'),n(s,'t42'),n(s,'t41'),n(s,'t31'),n(s,'t32')].some(v => v > 0);
   const allTeeth = maxKeys.every(k => n(s,k) > 0) && mandKeys.every(k => n(s,k) > 0);
   const ratio6 = sumMax6 > 0 ? sumMand6/sumMax6 : 0;
   const ratio12 = sumMax12 > 0 ? sumMand12/sumMax12 : 0;
-  const bolton6 = Math.round(ratio6 * 1000) / 10;
-  const bolton12 = Math.round(ratio12 * 1000) / 10;
   const bolton6Excess = ratio6 > 0.772 ? Math.round((sumMand6 - sumMax6*0.772)*10)/10 : Math.round((sumMax6 - sumMand6/0.772)*10)/10;
   const bolton12Excess = ratio12 > 0.913 ? Math.round((sumMand12 - sumMax12*0.913)*10)/10 : Math.round((sumMax12 - sumMand12/0.913)*10)/10;
 
-  // DDM totals (simplified — reads dispo fields)
-  const dSup = ['dispSup1513','dispSup1211','dispSup2122','dispSup2325'];
-  const dInf = ['dispInf4543','dispInf4241','dispInf3132','dispInf3335'];
+  // DDM per quadrant
+  const dSupKeys = ['dispSup1513','dispSup1211','dispSup2122','dispSup2325'];
+  const dInfKeys = ['dispInf4543','dispInf4241','dispInf3132','dispInf3335'];
   const necSup = [n(s,'t15')+n(s,'t14')+n(s,'t13'), n(s,'t12')+n(s,'t11'), n(s,'t21')+n(s,'t22'), n(s,'t23')+n(s,'t24')+n(s,'t25')];
   const necInf = [n(s,'t45')+n(s,'t44')+n(s,'t43'), n(s,'t42')+n(s,'t41'), n(s,'t31')+n(s,'t32'), n(s,'t33')+n(s,'t34')+n(s,'t35')];
-
-  const calcDDM = (dispKeys: string[], necArr: number[]): number | null => {
-    const hasAll = dispKeys.every(k => n(s,k) > 0) && necArr.every(v => v > 0);
-    if (!hasAll) return null;
-    return Math.round(dispKeys.reduce((a,k,i) => a + (n(s,k) - necArr[i]), 0) * 10) / 10;
-  };
-  const ddmSup = calcDDM(dSup, necSup);
-  const ddmInf = calcDDM(dInf, necInf);
+  const ddmSupQ = dSupKeys.map((k,i) => n(s,k) > 0 && necSup[i] > 0 ? Math.round((n(s,k) - necSup[i])*10)/10 : null);
+  const ddmInfQ = dInfKeys.map((k,i) => n(s,k) > 0 && necInf[i] > 0 ? Math.round((n(s,k) - necInf[i])*10)/10 : null);
+  const ddmSupTotal = ddmSupQ.every(v => v !== null) ? Math.round(ddmSupQ.reduce((a,v) => a + v!, 0)*10)/10 : null;
+  const ddmInfTotal = ddmInfQ.every(v => v !== null) ? Math.round(ddmInfQ.reduce((a,v) => a + v!, 0)*10)/10 : null;
 
   // Distances
   const distMolDelta = n(s,'distInterMolSup') > 0 && n(s,'distInterMolInf') > 0 ? Math.round((n(s,'distInterMolSup') - n(s,'distInterMolInf'))*10)/10 : null;
@@ -199,7 +202,7 @@ export default function OverviewTab() {
     );
   };
 
-  // Intra-oral flags (affichés dans la zone Intra-oral uniquement)
+  // Intra-oral flags
   const intraFlags: { label: string; field: string; detail?: string }[] = [
     { label: 'Frein', field: 'hasFreins', detail: 'freinsDent' },
     { label: 'Carie', field: 'hasCaries', detail: 'cariesDent' },
@@ -207,7 +210,7 @@ export default function OverviewTab() {
   ];
   const activeIntraFlags = intraFlags.filter(f => !!(s as any)[f.field]);
 
-  // Paro & Habitudes flags (affichés dans la zone Paro uniquement)
+  // Paro & Habitudes flags
   const paroHabFlags: { label: string; field: string; detail?: string }[] = [
     { label: 'Déglu. Atypique', field: 'hasDeglutitionAtypique' },
     { label: 'Interpo. Labiale', field: 'hasInterpoLabial' },
@@ -216,7 +219,6 @@ export default function OverviewTab() {
   ];
   const activeParoHabFlags = paroHabFlags.filter(f => !!(s as any)[f.field]);
 
-  // Habitudes from patient level
   const hab = patient.mauvaisesHabitudes;
   const habFlags = [
     hab.succionPouce && 'Succion',
@@ -225,37 +227,60 @@ export default function OverviewTab() {
     hab.respiBuccale && 'Respi. Buccale',
   ].filter(Boolean) as string[];
 
+  // Anamnèse flags
+  const mc = patient.maladiesChroniques;
+  const genFlags: { label: string; detail?: string }[] = [
+    mc.diabete && { label: 'Diabète', detail: patient.maladiesChroniquesDetails?.diabete },
+    mc.hypertension && { label: 'HTA', detail: patient.maladiesChroniquesDetails?.hypertension },
+    mc.allergies && { label: 'Allergies', detail: patient.maladiesChroniquesDetails?.allergies },
+    mc.cardio && { label: 'Cardio', detail: patient.maladiesChroniquesDetails?.cardio },
+    mc.respi && { label: 'Respi', detail: patient.maladiesChroniquesDetails?.respi },
+    patient.hasChirurgies && { label: 'Chirurgies', detail: patient.chirurgiesAnterieures },
+    patient.hasTraitements && { label: 'Traitements', detail: patient.traitementsCours },
+    patient.hasAutreGen && { label: 'Autre Méd.', detail: patient.autreGen },
+  ].filter(Boolean) as { label: string; detail?: string }[];
+
+  const dentFlags: { label: string; detail?: string }[] = [
+    patient.sensibilite && { label: 'Sensibilité' },
+    hab.succionPouce && { label: 'Succion' },
+    hab.bruxisme && { label: 'Bruxisme' },
+    patient.antecFamExtract && { label: 'Extractions', detail: patient.extractionDetails },
+    patient.hasOrthoPasse && { label: 'Ortho passé', detail: patient.traitementsOrthoPasses },
+    patient.hasAutreDent && { label: 'Autre Dent.', detail: patient.autreDent },
+  ].filter(Boolean) as { label: string; detail?: string }[];
+
   // Treatment plans
   const plans = [s.planTraitement1, s.planTraitement2, s.planTraitement3, s.planTraitement4, s.planTraitement5, s.planTraitement6].filter(Boolean);
 
   return (
     <div className="overview-grid">
       {/* ═══ HEADER ═══ */}
-      <div className="overview-header" onClick={() => setActiveTab('info')} title="→ Informations">
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '1rem', fontWeight: 700 }}>{patient.nom} {patient.prenom}</span>
-            <span className="ov-pill ov-pill-blue">{patient.sexe || '?'}</span>
-            {age && <span style={{ fontSize: 'var(--fs-small)', color: 'var(--c-text-secondary)' }}>{age}</span>}
-            {patient.dateNaissance && <span style={{ fontSize: 'var(--fs-badge)', color: 'var(--c-text-muted)' }}>({patient.dateNaissance})</span>}
-            <span className="ov-pill ov-pill-muted">{patient.id}</span>
+      {(() => {
+        const sexColor = patient.sexe === 'F' ? '#ec4899' : '#3b82f6';
+        return (
+          <div className="overview-header" style={{ borderLeftColor: sexColor }} onClick={() => setActiveTab('info')} title="→ Informations">
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: sexColor }}>{patient.nom} {patient.prenom}</span>
+                {age && <span style={{ fontSize: 'var(--fs-small)', color: 'var(--c-text-secondary)' }}>{age}</span>}
+                {patient.dateNaissance && <span style={{ fontSize: 'var(--fs-badge)', color: 'var(--c-text-muted)' }}>({patient.dateNaissance})</span>}
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--sp-3)', marginTop: '2px', fontSize: 'var(--fs-small)', color: 'var(--c-text-secondary)', flexWrap: 'wrap' }}>
+                {patient.motifConsultation && <span><b>MC :</b> {patient.motifConsultation}</span>}
+                {patient.praticien && <span><b>Prat :</b> {patient.praticien}</span>}
+              </div>
+            </div>
+            <span className="ov-pill ov-pill-muted" style={{ alignSelf: 'center', marginLeft: 'auto' }}>{patient.id}</span>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--sp-3)', marginTop: '2px', fontSize: 'var(--fs-small)', color: 'var(--c-text-secondary)', flexWrap: 'wrap' }}>
-            {patient.motifConsultation && <span><b>Motif :</b> {patient.motifConsultation}</span>}
-            {patient.antecFamExtract && <span className="ov-pill ov-pill-amber">Extractions{patient.extractionDetails ? ` (${patient.extractionDetails})` : ''}</span>}
-            {patient.praticien && <span><b>Prat :</b> {patient.praticien}</span>}
-            <span className="ov-pill ov-pill-blue">{s.nomSession}</span>
-            {s.stadeMaturation && <span className="ov-pill ov-pill-blue">CVM {s.stadeMaturation}</span>}
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ═══ ROW 2: EXTRA-ORAL | INTRA-ORAL | CEPH ═══ */}
 
       {/* Extra-oral */}
       <div className="overview-zone" onClick={() => setActiveTab('clinical')} title="→ Analyse Clinique">
         <div className="overview-zone-title">Extra-Oral</div>
-        <div className="ov-kv" style={{ gridTemplateColumns: '105px 1fr' }}>
+        <div className="ov-kv" style={{ gridTemplateColumns: '85px 1fr' }}>
           <KV label="Face" field="face" val={s.face} noGreen />
           <KV label="Symétrie" field="symetrieVisage" val={s.symetrieVisage} noGreen />
           {s.symetrieVisage === 'Asymétrique' && s.asymetrieDetails && (
@@ -282,11 +307,16 @@ export default function OverviewTab() {
           {/* Sagittal */}
           <div>
             <div className="ov-sub-title">Sagittal</div>
-            <div className="ov-kv" style={{ gridTemplateColumns: '42px 1fr', marginBottom: '4px' }}>
+            <div className="ov-kv" style={{ gridTemplateColumns: '58px 1fr', marginBottom: '4px' }}>
               <span className="ov-label">OJ</span>
-              <span className="ov-val" style={{ fontWeight: 700 }}><MetricVal val={s.overjet} warnLow={0} warnHigh={4} /></span>
+              {(() => {
+                const ojNum = parseFloat((s.overjet || '').replace(',', '.'));
+                const ojFilled = s.overjet && !isNaN(ojNum);
+                const ojAlert = ojFilled && (ojNum < 0 || ojNum > 4);
+                return <span className={`ov-val ${ojAlert ? 'ov-alert ov-alert-bg' : ''}`} style={{ fontWeight: 700 }}>{ojFilled ? `${ojNum} mm` : <span className="ov-empty">—</span>}</span>;
+              })()}
               {s.hasXBiteAnt && (
-                <><span className="ov-label">X-bite</span><span className="ov-val ov-alert ov-alert-bg">{s.xbiteAntDent || 'Ant.'}</span></>
+                <><span className="ov-label">Ant. X-bite</span><span className="ov-val ov-alert ov-alert-bg">{s.xbiteAntDent || '—'}</span></>
               )}
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-small)' }}>
@@ -364,13 +394,17 @@ export default function OverviewTab() {
       <div className="overview-zone" onClick={() => setActiveTab('radio')} title="→ Analyse Radio">
         <div className="overview-zone-title">Céphalométrie</div>
 
-        <div className="ov-sub-title">Sagittal</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-1)' }}>
+          {s.stadeMaturation && <span className="ov-pill ov-pill-blue" style={{ fontSize: 'var(--fs-badge)' }}>{s.stadeMaturation}</span>}
+          <div className="ov-sub-title" style={{ margin: 0, paddingBottom: 0, border: 'none' }}>Sagittal</div>
+        </div>
         <table className="ov-ceph-table">
           <tbody>
             {['sna','snb','anb','wits'].map(f => <CephRow key={f} field={f} />)}
           </tbody>
         </table>
 
+        <hr className="ov-sep" />
         <div className="ov-sub-title">Vertical</div>
         <table className="ov-ceph-table">
           <tbody>
@@ -378,6 +412,7 @@ export default function OverviewTab() {
           </tbody>
         </table>
 
+        <hr className="ov-sep" />
         <div className="ov-sub-title">Dentaire</div>
         <table className="ov-ceph-table">
           <tbody>
@@ -391,7 +426,7 @@ export default function OverviewTab() {
       {/* Paro + Habitudes */}
       <div className="overview-zone" onClick={() => setActiveTab('clinical')} title="→ Analyse Clinique">
         <div className="overview-zone-title">Paro & Habitudes</div>
-        <div className="ov-kv">
+        <div className="ov-kv" style={{ gridTemplateColumns: '85px 1fr' }}>
           <KV label="Hygiène" field="hygieneClin" val={s.hygieneClin} />
           <KV label="Phénotype" field="phenotype" val={s.phenotype} />
         </div>
@@ -418,32 +453,54 @@ export default function OverviewTab() {
         <div className="overview-zone-title">Moulage</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-2)' }}>
-          {/* DDM */}
+          {/* DDM quadrant table */}
           <div>
             <div className="ov-sub-title">DDM</div>
-            <div className="ov-kv">
-              <span className="ov-label">Sup</span>
-              <span className={`ov-val ${ddmSup !== null ? (ddmSup < 0 ? 'ov-alert ov-alert-bg' : 'ov-ok') : 'ov-empty'}`}>
-                {ddmSup !== null ? `${ddmSup > 0 ? '+' : ''}${ddmSup} mm` : '—'}
-              </span>
-              <span className="ov-label">Inf</span>
-              <span className={`ov-val ${ddmInf !== null ? (ddmInf < 0 ? 'ov-alert ov-alert-bg' : 'ov-ok') : 'ov-empty'}`}>
-                {ddmInf !== null ? `${ddmInf > 0 ? '+' : ''}${ddmInf} mm` : '—'}
-              </span>
-            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-badge)' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
+                  <th style={{ padding: '1px 2px', textAlign: 'left', color: 'var(--c-text-muted)', fontWeight: 500 }}></th>
+                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>15-13</th>
+                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>12-11</th>
+                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>21-22</th>
+                  <th style={{ padding: '1px 2px', textAlign: 'center', color: 'var(--c-text-muted)', fontWeight: 500 }}>23-25</th>
+                  <th style={{ padding: '1px 2px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid var(--c-border)' }}>Tot.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
+                  <td style={{ padding: '1px 2px', fontWeight: 700, color: '#1e40af', fontSize: 'var(--fs-badge)' }}>Sup</td>
+                  {ddmSupQ.map((v,i) => <DDMCell key={i} v={v} />)}
+                  <td style={{ borderLeft: '1px solid var(--c-border)', textAlign: 'center', fontWeight: 700, fontSize: 'var(--fs-badge)', color: ddmSupTotal === null ? '#94a3b8' : ddmSupTotal < 0 ? 'var(--c-alert)' : 'var(--c-filled)', padding: '1px 2px' }}>
+                    {ddmSupTotal !== null ? (ddmSupTotal > 0 ? `+${ddmSupTotal}` : ddmSupTotal) : '—'}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '1px 2px', fontWeight: 700, color: '#1e40af', fontSize: 'var(--fs-badge)' }}>Inf</td>
+                  {ddmInfQ.map((v,i) => <DDMCell key={i} v={v} />)}
+                  <td style={{ borderLeft: '1px solid var(--c-border)', textAlign: 'center', fontWeight: 700, fontSize: 'var(--fs-badge)', color: ddmInfTotal === null ? '#94a3b8' : ddmInfTotal < 0 ? 'var(--c-alert)' : 'var(--c-filled)', padding: '1px 2px' }}>
+                    {ddmInfTotal !== null ? (ddmInfTotal > 0 ? `+${ddmInfTotal}` : ddmInfTotal) : '—'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {/* Bolton */}
           <div>
             <div className="ov-sub-title">Bolton</div>
             <div className="ov-kv">
-              <span className="ov-label">Ant.</span>
+              <span className="ov-label">/6</span>
               <span className={`ov-val ${hasInc ? (bolton6Excess > 0 ? 'ov-warn' : 'ov-ok') : 'ov-empty'}`}>
-                {hasInc ? `${bolton6}%` : '—'}
+                {hasInc ? (bolton6Excess > 0
+                  ? `Excès ${ratio6 > 0.772 ? 'mand.' : 'max.'} +${bolton6Excess} mm`
+                  : 'Harmonieux') : '—'}
               </span>
-              <span className="ov-label">Total</span>
+              <span className="ov-label">/12</span>
               <span className={`ov-val ${allTeeth ? (bolton12Excess > 0 ? 'ov-warn' : 'ov-ok') : 'ov-empty'}`}>
-                {allTeeth ? `${bolton12}%` : '—'}
+                {allTeeth ? (bolton12Excess > 0
+                  ? `Excès ${ratio12 > 0.913 ? 'mand.' : 'max.'} +${bolton12Excess} mm`
+                  : 'Harmonieux') : '—'}
               </span>
             </div>
           </div>
@@ -483,23 +540,70 @@ export default function OverviewTab() {
         )}
       </div>
 
-      {/* OPG */}
-      <div className="overview-zone" onClick={() => setActiveTab('radio')} title="→ Analyse Radio">
-        <div className="overview-zone-title">OPG</div>
-        <div className="ov-kv">
-          <OpgRow label="Présence" rasField="opgPresenceRas" detailField="opgPresence" />
-          <OpgRow label="Position" rasField="opgPositionRas" detailField="opgPosition" />
-          <OpgRow label="Proportion" rasField="opgProportionRas" detailField="opgProportion" />
-          <OpgRow label="Pathologie" rasField="opgPathologieRas" detailField="opgPathologie" />
+      {/* Col 3: OPG (compact) + Anamnèse stacked */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', minWidth: 0 }}>
+        {/* OPG */}
+        <div className="overview-zone" onClick={() => setActiveTab('radio')} title="→ Analyse Radio">
+          <div className="overview-zone-title">OPG</div>
+          {(() => {
+            const opgItems = [
+              { label: 'Présence', ras: s.opgPresenceRas, detail: s.opgPresence },
+              { label: 'Position', ras: s.opgPositionRas, detail: s.opgPosition },
+              { label: 'Proportion', ras: s.opgProportionRas, detail: s.opgProportion },
+              { label: 'Pathologie', ras: s.opgPathologieRas, detail: s.opgPathologie },
+            ];
+            const withComment = opgItems.filter(o => !o.ras && o.detail);
+            const withIssue = opgItems.filter(o => !o.ras && !o.detail);
+            if (withComment.length === 0 && withIssue.length === 0) {
+              return <span className="ov-pill ov-pill-green">RAS</span>;
+            }
+            return (
+              <div className="ov-kv">
+                {withComment.map(o => (
+                  <><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">{o.detail}</span></>
+                ))}
+                {withIssue.map(o => (
+                  <><span className="ov-label">{o.label}</span><span className="ov-val ov-warn ov-warn-bg">—</span></>
+                ))}
+              </div>
+            );
+          })()}
         </div>
-        {s.opgRemarque && (
-          <>
-            <hr className="ov-sep" />
-            <div style={{ fontSize: 'var(--fs-small)', color: 'var(--c-text-secondary)' }}>
-              <b>Note :</b> {s.opgRemarque}
-            </div>
-          </>
-        )}
+
+        {/* Anamnèse & Plaintes */}
+        <div className="overview-zone" style={{ flex: 1 }} onClick={() => setActiveTab('info')} title="→ Informations">
+          <div className="overview-zone-title">Anamnèse & Plaintes</div>
+          {genFlags.length === 0 && dentFlags.length === 0 ? (
+            <span className="ov-pill ov-pill-green">RAS</span>
+          ) : (
+            <>
+              {genFlags.length > 0 && (
+                <>
+                  <div style={{ fontSize: 'var(--fs-badge)', fontWeight: 600, color: 'var(--c-text-muted)', marginBottom: '2px' }}>Santé Générale</div>
+                  <div className="ov-flags" style={{ marginBottom: 'var(--sp-1)' }}>
+                    {genFlags.map((f, i) => (
+                      <span key={i} className="ov-pill ov-pill-amber" title={f.detail || ''}>
+                        {f.label}{f.detail ? ` (${f.detail})` : ''}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+              {dentFlags.length > 0 && (
+                <>
+                  <div style={{ fontSize: 'var(--fs-badge)', fontWeight: 600, color: 'var(--c-text-muted)', marginBottom: '2px' }}>Santé Dentaire</div>
+                  <div className="ov-flags">
+                    {dentFlags.map((f, i) => (
+                      <span key={i} className="ov-pill ov-pill-amber" title={f.detail || ''}>
+                        {f.label}{f.detail ? ` (${f.detail})` : ''}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* ═══ ROW 4: TREATMENT PLAN ═══ */}

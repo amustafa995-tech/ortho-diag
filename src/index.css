@@ -28,7 +28,7 @@
   --c-border-light: #f1f5f9;
   --c-text: #0f172a;
   --c-text-secondary: #475569;
-  --c-text-muted: #94a3b8;
+  --c-text-muted: #6b7280;
 
   /* ── Espacement (grille 4px) ── */
   --sp-1: 0.25rem;   /* 4px */
@@ -42,7 +42,7 @@
   --fs-label: 0.75rem;
   --fs-value: 0.85rem;
   --fs-small: 0.7rem;
-  --fs-badge: 0.65rem;
+  --fs-badge: 0.7rem;
 
   /* ── Layout ── */
   --sidebar-w: 220px;
@@ -220,6 +220,18 @@ body { margin: 0; padding: 0; box-sizing: border-box; }
   font-weight: 700;
 }
 
+/* ── Tab color system ── */
+.mh-info    { border-left: 4px solid #3b82f6; padding-left: var(--sp-2); }
+.mh-info h2 { color: #3b82f6; }
+.mh-docs    { border-left: 4px solid #8b5cf6; padding-left: var(--sp-2); }
+.mh-docs h2 { color: #8b5cf6; }
+.mh-clin    { border-left: 4px solid #10b981; padding-left: var(--sp-2); }
+.mh-clin h2 { color: #10b981; }
+.mh-moul    { border-left: 4px solid #f59e0b; padding-left: var(--sp-2); }
+.mh-moul h2 { color: #f59e0b; }
+.mh-radio   { border-left: 4px solid #ef4444; padding-left: var(--sp-2); }
+.mh-radio h2 { color: #ef4444; }
+
 /* ── Session bar ── */
 .session-bar {
   display: flex;
@@ -240,6 +252,11 @@ body { margin: 0; padding: 0; box-sizing: border-box; }
   padding: var(--sp-3);
   margin-bottom: var(--sp-2);
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: box-shadow 0.15s;
+}
+
+.card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .card-header {
@@ -338,17 +355,23 @@ input.field-empty {
 .completion-badge {
   font-size: var(--fs-badge);
   font-weight: 700;
-  padding: 1px var(--sp-2);
+  padding: 2px var(--sp-2);
   border-radius: 8px;
   background: var(--c-bg);
   color: var(--c-text-muted);
   border: 1px solid var(--c-border);
+  min-width: 28px;
+  text-align: center;
 }
 
 .completion-badge.complete {
   background: var(--c-filled-bg);
   color: var(--c-filled);
   border-color: var(--c-filled-border);
+}
+
+.completion-badge.complete::before {
+  content: '✓ ';
 }
 
 /* ── TwoWayCheck ── */
@@ -419,7 +442,7 @@ input.field-empty {
 /* ── Section card (Face, Profil, etc.) ── */
 .section-card {
   padding: var(--sp-1) var(--sp-2);
-  background: var(--c-bg);
+  background: #f8fafc;
   border-radius: var(--radius);
   border: 1px solid var(--c-border);
 }
@@ -558,6 +581,8 @@ input.field-empty {
   line-height: 1.6;
 }
 
+.ov-kv .ov-val { display: block; }
+
 .ov-kv .ov-label {
   color: var(--c-text-secondary);
   font-weight: 500;
@@ -671,6 +696,37 @@ input.field-empty {
   border: none;
   border-top: 1px solid var(--c-border);
   margin: var(--sp-1) 0;
+}
+
+/* ══ TAB ACCENT COLORS ══ */
+.tab-info    { --tab-accent: #3b82f6; }
+.tab-docs    { --tab-accent: #8b5cf6; }
+.tab-clin    { --tab-accent: #10b981; }
+.tab-moul    { --tab-accent: #f59e0b; }
+.tab-radio   { --tab-accent: #ef4444; }
+
+.tab-info .card-header h3,
+.tab-docs .card-header h3,
+.tab-clin .card-header h3,
+.tab-moul .card-header h3,
+.tab-radio .card-header h3 {
+  color: var(--tab-accent);
+}
+
+/* ══ TAB TRANSITION ══ */
+.module-content {
+  animation: tabFadeIn 0.15s ease;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ══ RESPONSIVE ══ */
+@media (max-width: 1024px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .overview-grid { grid-template-columns: 1fr; }
 }
 
 /* ══ PRINT ══ */

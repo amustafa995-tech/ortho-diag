@@ -163,8 +163,8 @@ export default function MoulageTab() {
   };
 
   return (
-    <div className="module-content">
-      <div className="module-header" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+    <div className="module-content tab-moul">
+      <div className="module-header mh-moul" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0 }}>4. Analyse Moulage</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 700, color: '#fff', background: stadeColor }}>{stade}</span>

@@ -24,15 +24,15 @@ export default function InfoTab() {
   const adminDone = adminFields.filter(f => !!(patient as any)[f]).length;
 
   return (
-    <div className="module-content">
-      <div className="module-header"><h2>1. Informations</h2></div>
+    <div className="module-content tab-info">
+      <div className="module-header mh-info"><h2>1. Informations</h2></div>
 
       <div className="card">
         <div className="card-header">
           <h3>Identité & Acteurs</h3>
           <span className={`completion-badge ${identityDone === identityFields.length ? 'complete' : ''}`}>{identityDone}/{identityFields.length}</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.5fr 1.5fr 1.2fr 0.6fr', gap: 'var(--sp-2)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '0.7fr 1.2fr 1.2fr 1fr 0.5fr', gap: 'var(--sp-2)' }}>
           <Input label="ID" name="id" />
           <Input label="Nom" name="nom" />
           <Input label="Prénom" name="prenom" />

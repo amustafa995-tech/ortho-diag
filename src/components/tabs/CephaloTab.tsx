@@ -12,8 +12,8 @@ export default function CephaloTab() {
   if (!s) return null;
 
   return (
-    <div className="module-content">
-      <div className="module-header" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+    <div className="module-content tab-radio">
+      <div className="module-header mh-radio" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
          <h2 style={{ margin: 0 }}>5. Analyse Radio</h2>
       </div>
 
@@ -27,6 +27,7 @@ export default function CephaloTab() {
             tabIndex={500}
             value={s.stadeMaturation || ''}
             onChange={e => updateSessionField(patient.activeSessionId, 'stadeMaturation', e.target.value)}
+            className={!s.stadeMaturation ? 'field-empty' : ''}
             style={{ height: '30px', padding: '0 var(--sp-2)', fontSize: 'var(--fs-value)', border: '1px solid #cbd5e1', borderRadius: 'var(--radius)', fontFamily: 'inherit', background: '#fff' }}
           >
             <option value="">-</option>
@@ -72,7 +73,16 @@ export default function CephaloTab() {
       </div>
 
       <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
-        <div className="card-header"><h3>2. Analyse OPG</h3></div>
+        {(() => {
+          const opgReviewed = !s.opgPresenceRas || !s.opgPositionRas || !s.opgProportionRas || !s.opgPathologieRas
+            || !!s.opgPresence || !!s.opgPosition || !!s.opgProportion || !!s.opgPathologie || !!s.opgRemarque;
+          return (
+            <div className="card-header">
+              <h3>2. Analyse OPG</h3>
+              {!opgReviewed && <span className="completion-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>À évaluer</span>}
+            </div>
+          );
+        })()}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
            <OpgToggle label="Présence" rasField="opgPresenceRas" detailField="opgPresence" />
            <OpgToggle label="Position" rasField="opgPositionRas" detailField="opgPosition" />

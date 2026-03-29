@@ -57,8 +57,8 @@ export default function DocumentationTab() {
   };
 
   return (
-    <div className="module-content">
-      <div className="module-header" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+    <div className="module-content tab-docs">
+      <div className="module-header mh-docs" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
          <h2 style={{ margin: 0 }}>2. Documentation Clinique</h2>
       </div>
 
