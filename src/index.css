@@ -771,8 +771,9 @@ input.field-empty {
 
 .espace-dispo-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
+  min-width: 0;
 }
 
 /* ══ RESPONSIVE ══ */
@@ -784,9 +785,6 @@ input.field-empty {
   }
   .intra-oral-grid .v-divider {
     display: none;
-  }
-  .espace-dispo-grid {
-    grid-template-columns: 1fr 1fr;
   }
 }
 

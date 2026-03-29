@@ -77,8 +77,9 @@ export default function App() {
     const moulFields = ['t16','t15','t14','t13','t12','t11','t21','t22','t23','t24','t25','t26','t46','t45','t44','t43','t42','t41','t31','t32','t33','t34','t35','t36'];
     const radioFields = ['sna','snb','anb','wits','snSpaspp','spasppMego','snMego','incisifSn','incisifSpaspp','incisifMego','incisifIncisif','stadeMaturation'];
     const traitFields = ['planTraitement1','planTraitement2','planTraitement3','planTraitement4','planTraitement5'];
-    const total = infoFields.length + clinFields.length + moulFields.length + radioFields.length + traitFields.length;
-    const done = countFilled(infoFields, patient) + countFilled(clinFields, s) + countFilled(moulFields, s) + countFilled(radioFields, s) + countFilled(traitFields, s);
+    const traitOk = traitFields.some(f => !!(s as any)[f]) ? 1 : 0;
+    const total = infoFields.length + clinFields.length + moulFields.length + radioFields.length + 1;
+    const done = countFilled(infoFields, patient) + countFilled(clinFields, s) + countFilled(moulFields, s) + countFilled(radioFields, s) + traitOk;
     return Math.round((done / total) * 100);
   })();
 
