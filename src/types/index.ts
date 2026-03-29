@@ -5,6 +5,45 @@ export interface DocFile {
 
 export type DataSource = 'LOCAL' | 'ZAWIN';
 
+// ── Document Management ──
+export type DocumentCategory = 'ID' | 'ASS' | 'ASS-DOC' | 'LTR' | 'DEV' | 'CONS' | 'RAD' | 'PHO' | 'RPT' | 'FAC' | 'AUT';
+
+export interface PatientDocument {
+  id: string;
+  fileName: string;          // nom sur le disque
+  displayName: string;       // nom affiché (renommable)
+  category: DocumentCategory;
+  dateAdded: string;         // ISO date
+  originalName: string;      // nom original à l'upload
+  mimeType: string;
+  size: number;              // bytes
+  notes: string;
+}
+
+export const DOCUMENT_CATEGORIES: { code: DocumentCategory; label: string; description: string }[] = [
+  { code: 'ID',      label: 'Identité',              description: 'CNI, passeport, carte de séjour' },
+  { code: 'ASS',     label: 'Carte Assurance',        description: 'Carte assurance maladie, complémentaire' },
+  { code: 'ASS-DOC', label: 'Courrier Assurance',     description: 'Demandes de prise en charge, réponses, garanties' },
+  { code: 'LTR',     label: 'Lettres',                description: 'Correspondance médecins, spécialistes' },
+  { code: 'DEV',     label: 'Devis',                  description: 'Devis de traitement' },
+  { code: 'CONS',    label: 'Consentement',            description: 'Formulaires de consentement signés' },
+  { code: 'RAD',     label: 'Radiographies',           description: 'OPG, céphalos, CBCT, radio intra' },
+  { code: 'PHO',     label: 'Photos',                  description: 'Photos cliniques extra/intra-orales' },
+  { code: 'RPT',     label: 'Rapports',                description: 'Rapports de consultation, bilans' },
+  { code: 'FAC',     label: 'Factures',                description: 'Factures émises, rappels' },
+  { code: 'AUT',     label: 'Autre',                   description: 'Documents non catégorisés' },
+];
+
+export interface ClinicInfo {
+  clinicName: string;
+  clinicAddress: string;
+  clinicNPA: string;
+  clinicPhone: string;
+  clinicEmail: string;
+  clinicRCC: string;        // n° RCC du praticien
+  clinicGLN: string;        // n° GLN
+}
+
 export interface Doctor {
   id: number;
   nom: string;
@@ -146,6 +185,9 @@ export interface PatientRecord {
   // Insurance detection fields - Medical (patient-level)
   hasFente: boolean; hasMacroglossie: boolean; hasSAOS: boolean; hasTroublesDeglutitionGrave: boolean; hasAsymetrieGrave: boolean; has17d: boolean;
 
+  // Documents
+  documents: PatientDocument[];
+
   // Sessions
   sessions: ClinicalSession[];
   activeSessionId: string;
@@ -175,6 +217,7 @@ export interface AppSettings {
   doctors: Doctor[];
   praticiens: Praticien[];
   insuranceCriteria: InsuranceCriteria;
+  clinicInfo: ClinicInfo;
 }
 
 export interface OrthoDiagState {
@@ -204,4 +247,9 @@ export interface OrthoDiagState {
   deleteSession: (sessionId: string) => void;
   setActiveSession: (sessionId: string) => void;
   importPatientData: (data: Partial<PatientRecord>) => void;
+
+  // Document Management
+  addDocument: (doc: PatientDocument) => void;
+  removeDocument: (docId: string) => void;
+  updateDocument: (docId: string, partial: Partial<PatientDocument>) => void;
 }

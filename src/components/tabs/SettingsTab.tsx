@@ -122,6 +122,36 @@ export default function SettingsTab() {
         </div>
       </div>
 
+      {/* ── Clinic Info ── */}
+      <div className="card" style={{ marginBottom: '1rem', padding: '1.5rem', borderLeft: '4px solid #8b5cf6' }}>
+        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#0f172a' }}>Informations de la Clinique</h3>
+        <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+          Ces informations sont utilisées pour la génération automatique de documents (courriers, devis, demandes d'assurance).
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+          {[
+            { key: 'clinicName', label: 'Nom de la Clinique', ph: 'Cabinet Orthodontique...' },
+            { key: 'clinicAddress', label: 'Adresse', ph: 'Rue et n°' },
+            { key: 'clinicNPA', label: 'NPA / Localité', ph: '1000 Lausanne' },
+            { key: 'clinicPhone', label: 'Téléphone', ph: '+41 21...' },
+            { key: 'clinicEmail', label: 'E-mail', ph: 'contact@clinique.ch' },
+            { key: 'clinicRCC', label: 'N° RCC', ph: 'Registre Créancier' },
+            { key: 'clinicGLN', label: 'N° GLN', ph: 'Global Location Number' },
+          ].map(f => (
+            <div key={f.key} className="form-group">
+              <label style={{ fontSize: '0.75rem', fontWeight: 500, color: '#475569', marginBottom: '2px' }}>{f.label}</label>
+              <input
+                type="text"
+                value={(settings.clinicInfo as any)[f.key] || ''}
+                onChange={e => updateSettings({ clinicInfo: { ...settings.clinicInfo, [f.key]: e.target.value } })}
+                placeholder={f.ph}
+                style={{ padding: '0.4rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.85rem' }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div className="card" style={{ padding: '1rem' }}>
           <h3 style={{ marginBottom: '0.5rem' }}>Praticiens OrthoDiag</h3>

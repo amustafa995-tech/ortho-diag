@@ -122,6 +122,70 @@ export class FileSystemService {
     }
     this.urlCache.clear();
   }
+
+  // ── Document Management ──
+
+  async ensureDocumentsDir(dirHandle: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle> {
+    return await dirHandle.getDirectoryHandle('documents', { create: true });
+  }
+
+  async ensureCategoryDir(dirHandle: FileSystemDirectoryHandle, category: string): Promise<FileSystemDirectoryHandle> {
+    const docsDir = await this.ensureDocumentsDir(dirHandle);
+    return await docsDir.getDirectoryHandle(category, { create: true });
+  }
+
+  async saveDocument(dirHandle: FileSystemDirectoryHandle, file: File, category: string, fileName: string): Promise<string> {
+    const catDir = await this.ensureCategoryDir(dirHandle, category);
+    const fileHandle = await catDir.getFileHandle(fileName, { create: true });
+    const writable = await (fileHandle as any).createWritable();
+    await writable.write(file);
+    await writable.close();
+    return fileName;
+  }
+
+  async deleteDocument(dirHandle: FileSystemDirectoryHandle, category: string, fileName: string): Promise<void> {
+    try {
+      const catDir = await this.ensureCategoryDir(dirHandle, category);
+      await (catDir as any).removeEntry(fileName);
+    } catch (err) {
+      console.error(`Impossible de supprimer ${category}/${fileName}`, err);
+    }
+  }
+
+  async renameDocument(dirHandle: FileSystemDirectoryHandle, category: string, oldName: string, newName: string): Promise<boolean> {
+    try {
+      const catDir = await this.ensureCategoryDir(dirHandle, category);
+      const oldHandle = await catDir.getFileHandle(oldName);
+      const file = await oldHandle.getFile();
+      const newHandle = await catDir.getFileHandle(newName, { create: true });
+      const writable = await (newHandle as any).createWritable();
+      await writable.write(file);
+      await writable.close();
+      await (catDir as any).removeEntry(oldName);
+      return true;
+    } catch (err) {
+      console.error(`Impossible de renommer ${oldName} → ${newName}`, err);
+      return false;
+    }
+  }
+
+  async getDocumentUrl(dirHandle: FileSystemDirectoryHandle, category: string, fileName: string): Promise<string | null> {
+    const cacheKey = `${(dirHandle as any).name}/documents/${category}/${fileName}`;
+    const cached = this.urlCache.get(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const catDir = await this.ensureCategoryDir(dirHandle, category);
+      const fileHandle = await catDir.getFileHandle(fileName);
+      const file = await fileHandle.getFile();
+      const url = URL.createObjectURL(file);
+      this.urlCache.set(cacheKey, url);
+      return url;
+    } catch (err) {
+      console.error(`Impossible de lire documents/${category}/${fileName}`, err);
+      return null;
+    }
+  }
 }
 
 export const fileSystem = new FileSystemService();

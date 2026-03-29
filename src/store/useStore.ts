@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { OrthoDiagState, PatientRecord, AppSettings, ClinicalSession } from '../types';
+import type { OrthoDiagState, PatientRecord, AppSettings, ClinicalSession, ClinicInfo } from '../types';
 
 export const initialSession: ClinicalSession = {
   id: "T0",
@@ -48,6 +48,7 @@ const initialPatient: PatientRecord = {
     mauvaisesHabitudes: { succionPouce: false, bruxisme: false, rongerOngles: false, respiBuccale: false },
     hasFente: false, hasMacroglossie: false, hasSAOS: false, hasTroublesDeglutitionGrave: false, hasAsymetrieGrave: false, has17d: false,
     motifConsultation: "Dents en avant", praticien: "Dr. MA", dention: "", implant: "", implantDent: "",
+    documents: [],
     sessions: [initialSession],
     activeSessionId: "T0"
 };
@@ -68,6 +69,9 @@ const initialSettings: AppSettings = {
     ai209_snmego_deep: 12, ai209_snmego_deep_combo: 15,
     ai210_anb: -1, ai210_anb_combo: 1,
     hg_overjet: 8, hg_overbite_open_teeth: 6, hg_encombrement: 8, hg_age_max: 18,
+  },
+  clinicInfo: {
+    clinicName: '', clinicAddress: '', clinicNPA: '', clinicPhone: '', clinicEmail: '', clinicRCC: '', clinicGLN: '',
   }
 };
 
@@ -142,6 +146,21 @@ export const useStore = create<OrthoDiagState>()(
 
       setActiveSession: (sessionId) => set((state) => ({
         patient: { ...state.patient, activeSessionId: sessionId }
+      })),
+
+      addDocument: (doc) => set((state) => ({
+        patient: { ...state.patient, documents: [...state.patient.documents, doc] }
+      })),
+
+      removeDocument: (docId) => set((state) => ({
+        patient: { ...state.patient, documents: state.patient.documents.filter(d => d.id !== docId) }
+      })),
+
+      updateDocument: (docId, partial) => set((state) => ({
+        patient: {
+          ...state.patient,
+          documents: state.patient.documents.map(d => d.id === docId ? { ...d, ...partial } : d)
+        }
       }))
     }),
     {
@@ -153,6 +172,10 @@ export const useStore = create<OrthoDiagState>()(
         merged.settings.insuranceCriteria = {
           ...current.settings.insuranceCriteria,
           ...(persisted?.settings?.insuranceCriteria || {}),
+        };
+        merged.settings.clinicInfo = {
+          ...current.settings.clinicInfo,
+          ...(persisted?.settings?.clinicInfo || {}),
         };
         // Deep-merge patient so new patient-level fields get defaults
         merged.patient = { ...current.patient, ...(persisted?.patient || {}) };
